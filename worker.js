@@ -182,11 +182,17 @@ function parsePreciosCSV(csv) {
 
 function normM(val) {
   if (!val) return '';
-  val = val.trim();
-  const cm = val.match(/^(\d+)\s*cm$/i);
+  val = val.trim().replace(/\s/g, '');
+  // "60cm" o "60 cm"
+  const cm = val.match(/^(\d+)cm$/i);
   if (cm) return (parseInt(cm[1]) / 100).toFixed(2);
-  const m = val.match(/^([\d.]+)\s*m$/i);
+  // "2.40m" o "2.4m"
+  const m = val.match(/^([\d.]+)m$/i);
   if (m) return parseFloat(m[1]).toFixed(2);
+  // Decimal sin unidad: "2.40", "0.60" → metros
+  if (/^\d+\.\d+$/.test(val)) return parseFloat(val).toFixed(2);
+  // Entero sin unidad: "60", "240" → centímetros
+  if (/^\d+$/.test(val)) return (parseInt(val, 10) / 100).toFixed(2);
   return '';
 }
 
@@ -319,6 +325,24 @@ export default {
       if (url.pathname === '/api/precios') {
         if (method !== 'GET') return json({ error: 'Método no permitido' }, 405);
         return await handlePrecios(env);
+      }
+
+      // ── GET /api/precios/debug ─────────────────────────────
+      // Retorna las claves disponibles para diagnosticar problemas de lookup
+      if (url.pathname === '/api/precios/debug') {
+        const p = await handlePrecios(env).then(r => r.json());
+        return json({
+          torres_cats:     Object.keys(p.torres || {}),
+          torres_sample:   Object.entries(p.torres || {}).slice(0,2).map(([cat, alts]) => ({
+            cat,
+            alts: Object.keys(alts).slice(0,5).map(a => ({ alt: a, profs: Object.keys(alts[a]) })),
+          })),
+          vigas_cats:      Object.keys(p.vigas || {}),
+          vigas_sample:    Object.entries(p.vigas || {}).slice(0,2).map(([cat, ls]) => ({ cat, largos: Object.keys(ls) })),
+          entrepanos_cats: Object.keys(p.entrepanos || {}),
+          entrepanos_sample: Object.entries(p.entrepanos || {}).slice(0,2).map(([cat, ls]) => ({ cat, largos: Object.keys(ls).slice(0,3) })),
+          otros:           p.otros,
+        });
       }
 
       // ── POST /api/render ───────────────────────────────────

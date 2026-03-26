@@ -2011,6 +2011,19 @@ function actualizarConfigUI() {
   const entPrice  = precios.entrepanos?.[entrepano]?.[largo]?.[prof];
 
   if (!torPrice || !vigaPrice || !entPrice) {
+    // Debug: muestra en consola las claves disponibles vs. las buscadas
+    console.warn('[ESTANTEK] Precio no encontrado:', {
+      buscado: { tipo, torre, prof, largo, entrepano },
+      torres_cats: Object.keys(precios.torres || {}),
+      torres_alts: Object.keys(precios.torres?.[tipo] || {}),
+      torres_profs: Object.keys(precios.torres?.[tipo]?.[torre] || {}),
+      vigas_cats: Object.keys(precios.vigas || {}),
+      vigas_largos: Object.keys(precios.vigas?.[tipo] || {}),
+      ent_cats: Object.keys(precios.entrepanos || {}),
+      ent_largos: Object.keys(precios.entrepanos?.[entrepano] || {}),
+      ent_profs: Object.keys(precios.entrepanos?.[entrepano]?.[largo] || {}),
+      torPrice, vigaPrice, entPrice,
+    });
     desglose.innerHTML = '<div class="conf-no-price">Combinación no disponible en lista de precios.<br>Ajusta las dimensiones o actualiza el Google Sheet.</div>';
     btn.disabled = true;
     return;
