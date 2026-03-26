@@ -1780,152 +1780,186 @@ function _profLabel(p) {
   const n = parseFloat(p);
   return n === 0.6 ? '0.6m' : n === 0.8 ? '0.8m' : n.toFixed(2) + 'm';
 }
+
+// FIX 1 — número de tablillas proporcional al largo (~47cm cada una)
+// 2.00m→4 | 2.40m→5 | 2.80m→6 | 3.00m→6 | 3.20m→7
+function _boardCount(largo) {
+  return Math.round(parseFloat(largo) / 0.47);
+}
+
 // Descripción del entrepaño para el prompt de imagen
-function _shelfDesc(entrepano) {
+function _shelfDesc(entrepano, largo) {
   if (entrepano === 'GALVANIZADO')
     return 'Shelf panels made of corrugated galvanized steel sheet with longitudinal ribs, metallic gray color.';
-  if (entrepano === 'PREMIUM')
-    return 'Shelf panels made of individual wood slats/boards with visible gaps between each slat, premium dark hardwood tone, realistic wood grain texture on each individual board — NOT a solid panel.';
-  return 'Shelf panels made of individual wood slats/boards with visible gaps between each slat, natural honey-brown wood tone, realistic wood grain texture on each individual board — NOT a solid panel.';
+  const boards = _boardCount(largo || 2.40);
+  const tone   = entrepano === 'PREMIUM' ? 'premium dark hardwood tone' : 'natural honey-brown wood tone';
+  return `Shelf panels made of wide wooden boards approximately 40-50cm wide each, with visible seam/gap between boards — exactly ${boards} wide boards per shelf, proportional to ${parseFloat(largo).toFixed(2)}m width, ${tone}, realistic thick lumber appearance, natural wood grain texture — NOT thin slats, NOT a solid panel.`;
 }
-// Descripción de las columnas para LINEA
-function _colDescLinea(modulos) {
+
+// FIX 3 — columnas LINEA: módulos+1, espaciado explícito, bracing por par
+// 2 módulos → 3 torres: "EXACTLY 3 columns: 2 outer + 1 center shared"
+// 3 módulos → 4 torres: "EXACTLY 4 columns: 2 outer + 2 intermediate shared"
+// 4 módulos → 5 torres: "EXACTLY 5 columns: 2 outer + 3 intermediate shared"
+// 5 módulos → 6 torres: "EXACTLY 6 columns: 2 outer + 4 intermediate shared"
+function _colDescLinea(modulos, largoModulo) {
   const total  = modulos + 1;
   const shared = modulos - 1;
-  let detail;
-  if (modulos === 2) detail = '3 columns — 2 outer + 1 shared center column';
-  else if (modulos === 3) detail = '4 columns — 2 outer + 2 shared intermediate columns';
-  else detail = `${total} columns — 2 outer + ${shared} shared intermediate`;
-  return `EXACTLY ${total} vertical dark charcoal columns (#1A1A1A) — ${detail}.`;
+  return `EXACTLY ${total} vertical columns total — 2 outer end columns + ${shared} intermediate shared columns, evenly spaced ${parseFloat(largoModulo).toFixed(2)}m apart center-to-center, all columns identical dark charcoal steel (#1A1A1A), X-cross diagonal bracing panel between EACH pair of adjacent columns (${modulos} bracing panels total).`;
 }
+
 // Nota extra si profundidad grande
 function _depthNote(prof) {
   return parseFloat(prof) >= 1.00
     ? '\nDeep shelves clearly visible from the 3/4 angle, depth appears substantial and realistic.' : '';
 }
 
+// FIX 4 — proporciones reales estrictas, aplicado en TODOS los prompts
+function _proportionsNote(largoTotal, torre, prof, largoModulo) {
+  const lt = parseFloat(largoTotal), al = parseFloat(torre), pr = parseFloat(prof);
+  const ratio    = (lt / al).toFixed(2);
+  const depthPct = Math.round((pr / lt) * 100);
+  let note = `CRITICAL — strictly accurate proportions required: width-to-height ratio must be exactly ${lt}:${al} (ratio ${ratio}:1), depth-to-width ratio must be ${pr}:${lt} (depth is ${depthPct}% of width). Do NOT make the shelving look taller, wider or shallower than these exact ratios. The 3D perspective must reflect true geometric proportions.`;
+  if (largoModulo) {
+    const xTimes = (lt / al).toFixed(1);
+    note += ` Each module width ${parseFloat(largoModulo).toFixed(2)}m must appear identical and evenly spaced, total width ${lt}m must be visually ${xTimes}× wider than the ${al}m height.`;
+  }
+  return note;
+}
+
+// FIX 2 — marca de agua: logo completo (ícono estantería + texto) en cuadrícula horizontal
+const _WATERMARK = `Semi-transparent watermark overlay IN FRONT of the shelving (not behind), covering the entire image — the watermark pattern consists of the ESTANTEK logo repeated in a horizontal grid: each tile shows a small shelving unit icon on the left + bold text 'ESTANTEK' on the right, arranged in rows and columns across the whole image, 40% opacity black color, watermark must be clearly visible over the shelving to prevent image copying, pattern repeats approximately 3 columns × 4 rows.`;
+
 // ── A) Técnico — estilo catálogo EXACTO del brief ─────────────
 function buildTechnicalPrompt(c) {
-  const prof     = _profLabel(String(c.prof));
-  const shelf    = _shelfDesc(c.entrepano);
+  const prof      = _profLabel(String(c.prof));
   const depthNote = _depthNote(String(c.prof));
 
   if (c.modo === 'LINEA') {
+    const avgModulo = (parseFloat(c.largoUtil) / c.modulos).toFixed(2);
+    const shelf     = _shelfDesc(c.entrepano, avgModulo);
     const largoModuloDesc = configGrupos.length === 1
       ? `${configGrupos[0].largo}m`
       : configGrupos.map(g=>`${g.cant}×${g.largo}m`).join(', ');
     const totalVigas = c.modulos * c.niveles * 2;
     return [
       `Technical 3D product illustration of a connected industrial shelving system with ${c.modulos} modules in a single continuous line.`,
-      `Strictly maintain real-world proportions: ${c.torre}m height, ${c.largoTotal}m total width, ${prof} depth — depth of ${prof} must be clearly visible and proportionally accurate.${depthNote}`,
+      _proportionsNote(c.largoTotal, c.torre, c.prof, avgModulo),
       `${c.niveles} shelf levels per module.`,
-      _colDescLinea(c.modulos),
-      `X-cross diagonal steel bracing between each pair of adjacent columns.`,
+      _colDescLinea(c.modulos, avgModulo),
       `${totalVigas} bright orange horizontal load beams (#E65100), ${c.niveles} beams per module spanning ${largoModuloDesc} each.`,
       shelf,
-      `3/4 perspective view showing all ${c.modulos} modules and all ${c.modulos+1} columns clearly.`,
+      `3/4 perspective view showing all ${c.modulos} modules and all ${c.modulos+1} columns clearly.${depthNote}`,
       `Pure white background.`,
       `Dimension arrows: ${c.torre}m ALTO on left, ${prof} PROFUNDO on front corner, ${c.largoUtil}m LARGO ÚTIL spanning full bottom, individual module width ${largoModuloDesc} shown with smaller arrow.`,
       `Black rounded rectangle label showing "Carga máx. por nivel: ${c.cap}".`,
-      `"ESTANTEK" watermark text repeated in diagonal grid pattern as a semi-transparent overlay IN FRONT of the shelving unit (not behind), 30% opacity, gray color — watermark must partially cover the shelving to prevent copying.`,
+      _WATERMARK,
       `Technical illustration style, all modules perfectly symmetrical, uniform spacing, sharp clean edges, flat studio lighting.`,
     ].join('\n');
   }
 
   // INDIVIDUAL
-  const cant = c.cantidad || 1;
+  const shelf = _shelfDesc(c.entrepano, c.largo);
+  const cant  = c.cantidad || 1;
   if (cant > 1) {
     return [
       `Technical 3D product illustration of ${cant} identical industrial metal shelving units placed side by side with small gap between them.`,
-      `Strictly maintain real-world proportions per unit: ${c.torre}m height, ${c.largoTotal}m total width, ${prof} depth.${depthNote}`,
+      _proportionsNote(c.largoTotal, c.torre, c.prof),
       `Each unit has ${c.niveles} shelf levels and 2 vertical dark charcoal columns (#1A1A1A) with X-cross diagonal bracing.`,
       `${c.niveles} bright orange horizontal beams (#E65100) per unit, one per level.`,
       shelf,
-      `3/4 perspective view from front-right corner showing depth clearly.`,
+      `3/4 perspective view from front-right corner showing depth clearly.${depthNote}`,
       `Pure white background.`,
       `Dimension arrows on the first unit: ${c.torre}m ALTO, ${prof} PROFUNDO, ${c.largoUtil}m LARGO ÚTIL.`,
       `"× ${cant} unidades" label visible.`,
       `Black rounded rectangle label showing "Carga máx. por nivel: ${c.cap}".`,
-      `"ESTANTEK" watermark text repeated in diagonal grid pattern as a semi-transparent overlay IN FRONT of all units (not behind), 30% opacity, gray color — watermark must partially cover shelving to prevent image theft.`,
+      _WATERMARK,
       `Technical illustration style, sharp clean lines, flat studio lighting.`,
     ].join('\n');
   }
   return [
     `Technical 3D product illustration of an industrial metal shelving unit.`,
-    `Strictly maintain real-world proportions: ${c.torre}m height, ${c.largoTotal}m total width, ${prof} depth — depth must be clearly visible and realistic in 3/4 view.${depthNote}`,
+    _proportionsNote(c.largoTotal, c.torre, c.prof),
     `${c.niveles} shelf levels.`,
     `2 vertical dark charcoal columns (#1A1A1A) with X-cross diagonal steel bracing between them.`,
     `${c.niveles} bright orange horizontal load beams (#E65100), one per level.`,
     shelf,
-    `3/4 perspective view from front-right corner showing depth clearly.`,
+    `3/4 perspective view from front-right corner showing depth clearly.${depthNote}`,
     `Pure white background.`,
     `Black dimension arrows: ${c.torre}m label on left side (ALTO), ${prof} label on front-left (PROFUNDO), ${c.largoUtil}m label on bottom (LARGO ÚTIL).`,
     `Black rounded rectangle label showing "Carga máx. por nivel: ${c.cap}".`,
-    `"ESTANTEK" watermark text repeated in diagonal grid pattern as a semi-transparent overlay IN FRONT of the shelving unit (not behind), 30% opacity, gray color — watermark must partially cover the shelving to prevent copying.`,
+    _WATERMARK,
     `Technical illustration style, clean sharp edges, isometric-like perspective, flat studio lighting, no cast shadows.`,
   ].join('\n');
 }
 
 // ── B) Mockup bodega — instalado y cargado ───────────────────
 function buildWarehouseMockupPrompt(c) {
-  const prof  = _profLabel(String(c.prof));
-  const shelf = _shelfDesc(c.entrepano);
+  const prof = _profLabel(String(c.prof));
   if (c.modo === 'LINEA') {
+    const avgModulo = (parseFloat(c.largoUtil) / c.modulos).toFixed(2);
+    const shelf     = _shelfDesc(c.entrepano, avgModulo);
     return [
       `Photorealistic commercial warehouse mockup,`,
       `a fully installed ${c.modulos}-module connected industrial metal shelving run,`,
       `${c.torre}m tall × ${c.largoTotal}m wide × ${prof} deep, ${c.niveles} levels per module,`,
-      `${_colDescLinea(c.modulos)}`,
-      `bright orange horizontal beams (#E65100). ${shelf}`,
+      _proportionsNote(c.largoTotal, c.torre, c.prof, avgModulo),
+      _colDescLinea(c.modulos, avgModulo),
+      `Bright orange horizontal beams (#E65100). ${shelf}`,
       `All levels fully loaded with organized cardboard boxes and packaged inventory.`,
       `${c.cap} per level load capacity.`,
       `Clean industrial warehouse interior, polished concrete floor, high-bay overhead lighting,`,
       `wide perspective shot showing the full length of the shelving run and its depth.`,
-      `"ESTANTEK" watermark as semi-transparent overlay IN FRONT of the shelving, 30% opacity.`,
+      _WATERMARK,
       `Professional commercial photography, sharp focus, no people.`,
     ].join('\n');
   }
-  const cant = c.cantidad || 1;
+  const cant  = c.cantidad || 1;
+  const shelf = _shelfDesc(c.entrepano, c.largo);
   return [
     `Photorealistic commercial warehouse mockup,`,
     `${cant > 1 ? `${cant} identical industrial metal shelving units side by side,` : 'a single fully installed industrial metal shelving unit,'}`,
     `${c.torre}m tall × ${c.largoTotal}m wide × ${prof} deep, ${c.niveles} shelf levels.`,
+    _proportionsNote(c.largoTotal, c.torre, c.prof),
     `2 dark charcoal/black uprights per unit (#1A1A1A) with X-cross bracing. ${shelf}`,
     `Bright orange horizontal load beams (#E65100). All levels neatly loaded with organized products.`,
     `${c.cap} per level load capacity.`,
     `Clean industrial warehouse interior, polished concrete floor, overhead bay lighting,`,
     `three-quarter perspective view showing depth clearly.`,
-    `"ESTANTEK" watermark as semi-transparent overlay IN FRONT of the shelving, 30% opacity.`,
+    _WATERMARK,
     `Professional commercial photography, sharp focus, no people.`,
   ].join('\n');
 }
 
 // ── C) Mockup comercial — imagen aspiracional ────────────────
 function buildCommercialMockupPrompt(c) {
-  const prof  = _profLabel(String(c.prof));
-  const shelf = _shelfDesc(c.entrepano);
+  const prof = _profLabel(String(c.prof));
   if (c.modo === 'LINEA') {
+    const avgModulo = (parseFloat(c.largoUtil) / c.modulos).toFixed(2);
+    const shelf     = _shelfDesc(c.entrepano, avgModulo);
     return [
       `Aspirational commercial product image, large-format showroom or well-organized distribution center,`,
       `a premium ${c.modulos}-module connected shelving system as the hero of the shot.`,
       `${c.torre}m tall × ${c.largoTotal}m total width × ${prof} deep, ${c.niveles} levels per module.`,
-      `${_colDescLinea(c.modulos)}`,
+      _proportionsNote(c.largoTotal, c.torre, c.prof, avgModulo),
+      _colDescLinea(c.modulos, avgModulo),
       `Bright orange accent beams (#E65100). ${shelf}`,
       `All levels stocked with neatly organized products. ${c.cap} per level.`,
       `Bright clean commercial space, warm professional studio lighting, wide impressive angle.`,
-      `"ESTANTEK" watermark as semi-transparent overlay IN FRONT of the system, 30% opacity.`,
+      _WATERMARK,
       `Brand-friendly composition, aspirational high-end imagery, no people.`,
     ].join('\n');
   }
-  const cant = c.cantidad || 1;
+  const cant  = c.cantidad || 1;
+  const shelf = _shelfDesc(c.entrepano, c.largo);
   return [
     `Aspirational commercial product image, premium industrial showroom.`,
     `${cant > 1 ? `${cant} identical industrial shelving units side by side,` : 'A single premium industrial metal shelving unit as the hero of the frame,'}`,
     `${c.torre}m tall × ${c.largoTotal}m wide × ${prof} deep, ${c.niveles} beautifully organized levels.`,
+    _proportionsNote(c.largoTotal, c.torre, c.prof),
     `2 dark charcoal/black uprights (#1A1A1A) with X-cross bracing. Bright orange accent beams (#E65100).`,
     `${shelf} Products and boxes displayed cleanly on every level. ${c.cap} per level.`,
     `Warm professional studio lighting, brand-friendly composition.`,
-    `"ESTANTEK" watermark as semi-transparent overlay IN FRONT of the shelving, 30% opacity.`,
+    _WATERMARK,
     `Aspirational high-end sales imagery, premium quality, no people.`,
   ].join('\n');
 }
