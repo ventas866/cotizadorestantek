@@ -1911,9 +1911,13 @@ async function cargarPrecios() {
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
     if (data.error) throw new Error(data.error);
+    // Verificar que los precios tengan datos reales (el Sheet puede parsear vacío si la URL es HTML)
+    const torresCats = Object.keys(data.torres || {});
+    if (torresCats.length === 0) throw new Error('Sheet devolvió precios vacíos — revisa PRICES_SHEET_URL');
     precios = data;
     if (badge) { badge.textContent = 'Precios actualizados'; badge.className = 'precios-badge ok'; }
   } catch (e) {
+    console.warn('[ESTANTEK] Usando precios de referencia local:', e.message);
     precios = PRECIOS_FALLBACK;
     if (badge) { badge.textContent = 'Precios de referencia'; badge.className = 'precios-badge err'; }
   }
