@@ -1,0 +1,5 @@
+*.xlsx
+node_modules/
+.wrangler/
+dist/
+.env

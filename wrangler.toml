@@ -1,0 +1,12 @@
+name = "estantek-cotizador-api"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+[vars]
+# Las variables secretas se agregan por Dashboard o CLI:
+# wrangler secret put SUPABASE_URL
+# wrangler secret put SUPABASE_SERVICE_KEY
+
+[[routes]]
+pattern = "cotizador.estantek.co/api/*"
+zone_name = "estantek.co"
