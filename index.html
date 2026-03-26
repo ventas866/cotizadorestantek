@@ -497,13 +497,26 @@ html, body { background: var(--bg); color: var(--negro); font-family: 'Barlow', 
 }
 .desglose-mini-row {
   display: flex; justify-content: space-between; align-items: center;
-  padding: 3px 0; border-bottom: 1px dashed #fed7aa; color: var(--gris-osc);
+  padding: 4px 0; border-bottom: 1px dashed #fed7aa; color: var(--gris-osc);
 }
 .desglose-mini-row:last-child { border-bottom: none; }
 .desglose-mini-total {
   display: flex; justify-content: flex-end; padding-top: 5px;
   font-weight: 700; color: var(--azul); font-size: 12px;
 }
+.desglose-price-edit {
+  display: flex; align-items: center; gap: 5px; flex-shrink: 0;
+}
+.desglose-price-edit .dprice-label {
+  font-size: 10px; color: var(--gris-clr);
+}
+.desglose-price-input {
+  width: 76px; padding: 2px 5px; font-size: 11px; text-align: right;
+  border: 1px solid #fed7aa; border-radius: 4px; background: white;
+  color: var(--negro); font-family: inherit;
+}
+.desglose-price-input:focus { outline: none; border-color: var(--naranja); box-shadow: 0 0 0 2px #fff3e0; }
+.desglose-line-total { font-size: 11px; min-width: 60px; text-align: right; color: var(--gris-osc); }
 
 /* ── GRUPOS DE MÓDULOS (línea unida) ─────────────────────── */
 .conf-grupo-fila { display:flex; align-items:center; gap:6px; margin-bottom:6px; }
@@ -1014,6 +1027,29 @@ function updateField(id, field, value) {
   calcTotales();
 }
 
+function updateDesgloseItem(prodId, dIdx, val) {
+  const p = productos.find(x => x.id === prodId);
+  if (!p || !p.desglose) return;
+  p.desglose[dIdx].precioUnit = val;
+  // recalcular precio unitario total desde desglose
+  p.precio = p.desglose.reduce((s, d) => s + d.cant * d.precioUnit, 0);
+  // actualizar total de esa línea
+  const lineEl = document.getElementById(`dline-${prodId}-${dIdx}`);
+  if (lineEl) lineEl.textContent = fmt(p.desglose[dIdx].cant * val);
+  // actualizar "Por unidad"
+  const unitEl = document.getElementById(`dunit-${prodId}`);
+  if (unitEl) unitEl.textContent = `Por unidad: ${fmt(p.precio)}`;
+  // actualizar campo "Precio ud."
+  const priceInput = document.getElementById(`precio-${prodId}`);
+  if (priceInput) priceInput.value = p.precio;
+  // actualizar subtotal
+  const sub = p.cantidad * p.precio;
+  const ivaAmt = p.iva ? Math.round(sub * 0.19) : 0;
+  const subEl = document.getElementById('sub-' + prodId);
+  if (subEl) subEl.textContent = fmt(sub + ivaAmt);
+  calcTotales();
+}
+
 function renderProductos() {
   const lista = document.getElementById('productos-lista');
   if (!productos.length) {
@@ -1027,10 +1063,15 @@ function renderProductos() {
     if (p.desglose) {
       // ── Ítem configurado — muestra desglose de piezas ──────
       const firstLine = (p.nombre || '').split('\n')[0];
-      const desgloseRows = p.desglose.map(d =>
+      const desgloseRows = p.desglose.map((d, idx) =>
         `<div class="desglose-mini-row">
            <span>${d.cant}× ${esc(d.desc)}</span>
-           <span>${fmt(d.cant * d.precioUnit)}</span>
+           <div class="desglose-price-edit">
+             <span class="dprice-label">c/u</span>
+             <input type="number" class="desglose-price-input" value="${d.precioUnit}" min="0"
+               oninput="updateDesgloseItem(${p.id}, ${idx}, parseInt(this.value)||0)">
+             <span class="desglose-line-total" id="dline-${p.id}-${idx}">${fmt(d.cant * d.precioUnit)}</span>
+           </div>
          </div>`
       ).join('');
       return `<div class="producto-card" id="prod-${p.id}">
@@ -1039,7 +1080,7 @@ function renderProductos() {
         <div style="font-size:13px;color:var(--negro);font-weight:600;margin-bottom:6px;padding-right:32px;line-height:1.4;">${esc(firstLine)}</div>
         <div class="desglose-mini">
           ${desgloseRows}
-          <div class="desglose-mini-total">Por unidad: ${fmt(p.precio)}</div>
+          <div class="desglose-mini-total" id="dunit-${p.id}">Por unidad: ${fmt(p.precio)}</div>
         </div>
         <div class="producto-row">
           <div class="field" style="margin-bottom:0">
@@ -1049,7 +1090,7 @@ function renderProductos() {
           </div>
           <div class="field" style="margin-bottom:0">
             <label>Precio ud.</label>
-            <input type="number" value="${p.precio}" min="0"
+            <input type="number" id="precio-${p.id}" value="${p.precio}" min="0"
               oninput="updateField(${p.id},'precio',parseInt(this.value)||0)">
           </div>
         </div>
@@ -1735,106 +1776,157 @@ function getConfigForPrompt() {
 }
 
 // ── Helpers para prompts ──────────────────────────────────────
-function _profLabel(p) { return p === '0.60' ? '0.6m' : p === '0.80' ? '0.8m' : p + 'm'; }
+function _profLabel(p) {
+  const n = parseFloat(p);
+  return n === 0.6 ? '0.6m' : n === 0.8 ? '0.8m' : n.toFixed(2) + 'm';
+}
+// Descripción del entrepaño para el prompt de imagen
+function _shelfDesc(entrepano) {
+  if (entrepano === 'GALVANIZADO')
+    return 'Shelf panels made of corrugated galvanized steel sheet with longitudinal ribs, metallic gray color.';
+  if (entrepano === 'PREMIUM')
+    return 'Shelf panels made of individual wood slats/boards with visible gaps between each slat, premium dark hardwood tone, realistic wood grain texture on each individual board — NOT a solid panel.';
+  return 'Shelf panels made of individual wood slats/boards with visible gaps between each slat, natural honey-brown wood tone, realistic wood grain texture on each individual board — NOT a solid panel.';
+}
+// Descripción de las columnas para LINEA
+function _colDescLinea(modulos) {
+  const total  = modulos + 1;
+  const shared = modulos - 1;
+  let detail;
+  if (modulos === 2) detail = '3 columns — 2 outer + 1 shared center column';
+  else if (modulos === 3) detail = '4 columns — 2 outer + 2 shared intermediate columns';
+  else detail = `${total} columns — 2 outer + ${shared} shared intermediate`;
+  return `EXACTLY ${total} vertical dark charcoal columns (#1A1A1A) — ${detail}.`;
+}
+// Nota extra si profundidad grande
+function _depthNote(prof) {
+  return parseFloat(prof) >= 1.00
+    ? '\nDeep shelves clearly visible from the 3/4 angle, depth appears substantial and realistic.' : '';
+}
 
-// ── A) Técnico — estilo catálogo industrial ───────────────────
+// ── A) Técnico — estilo catálogo EXACTO del brief ─────────────
 function buildTechnicalPrompt(c) {
+  const prof     = _profLabel(String(c.prof));
+  const shelf    = _shelfDesc(c.entrepano);
+  const depthNote = _depthNote(String(c.prof));
+
   if (c.modo === 'LINEA') {
-    const nCols = c.modulos + 1;
-    const moduloDesc = configGrupos.length === 1
-      ? `${c.modulos} modules × ${configGrupos[0].largo}m each`
-      : configGrupos.map(g=>`${g.cant}×${g.largo}m`).join(' + ');
+    const largoModuloDesc = configGrupos.length === 1
+      ? `${configGrupos[0].largo}m`
+      : configGrupos.map(g=>`${g.cant}×${g.largo}m`).join(', ');
+    const totalVigas = c.modulos * c.niveles * 2;
     return [
-      `Technical 3D illustration of a connected industrial shelving system,`,
-      `${c.modulos} modules joined in a single continuous line,`,
-      `clean white background with faint "ESTANTEK" watermark pattern,`,
-      `${c.niveles} shelf levels per module, ${c.torre}m tall,`,
-      `total width ${c.largoTotal}m (${moduloDesc}), ${_profLabel(String(c.prof))} deep,`,
-      `${nCols} dark charcoal/black vertical steel columns with X-cross bracing between each pair (${c.modulos-1} intermediate columns are shared between adjacent modules),`,
-      `bright orange horizontal beams spanning each module (#E65100),`,
-      `natural wood MDF shelf panels (honey/light brown color),`,
-      `3/4 perspective view showing all ${c.modulos} modules clearly,`,
-      `black dimension arrows: ${c.torre}m ALTO, ${_profLabel(String(c.prof))} PROFUNDO, total ${c.largoTotal}m LARGO TOTAL, useful span ${c.largoUtil}m ANCHO ÚTIL,`,
-      `small black label box showing "Carga máx. por nivel: ${c.cap}",`,
-      `technical product illustration style, isometric-like, sharp edges, no shadows, flat studio lighting, high detail`,
+      `Technical 3D product illustration of a connected industrial shelving system with ${c.modulos} modules in a single continuous line.`,
+      `Strictly maintain real-world proportions: ${c.torre}m height, ${c.largoTotal}m total width, ${prof} depth — depth of ${prof} must be clearly visible and proportionally accurate.${depthNote}`,
+      `${c.niveles} shelf levels per module.`,
+      _colDescLinea(c.modulos),
+      `X-cross diagonal steel bracing between each pair of adjacent columns.`,
+      `${totalVigas} bright orange horizontal load beams (#E65100), ${c.niveles} beams per module spanning ${largoModuloDesc} each.`,
+      shelf,
+      `3/4 perspective view showing all ${c.modulos} modules and all ${c.modulos+1} columns clearly.`,
+      `Pure white background.`,
+      `Dimension arrows: ${c.torre}m ALTO on left, ${prof} PROFUNDO on front corner, ${c.largoUtil}m LARGO ÚTIL spanning full bottom, individual module width ${largoModuloDesc} shown with smaller arrow.`,
+      `Black rounded rectangle label showing "Carga máx. por nivel: ${c.cap}".`,
+      `"ESTANTEK" watermark text repeated in diagonal grid pattern as a semi-transparent overlay IN FRONT of the shelving unit (not behind), 30% opacity, gray color — watermark must partially cover the shelving to prevent copying.`,
+      `Technical illustration style, all modules perfectly symmetrical, uniform spacing, sharp clean edges, flat studio lighting.`,
     ].join('\n');
   }
+
   // INDIVIDUAL
-  const nLabel = (c.cantidad||1) > 1
-    ? `${c.cantidad} identical units shown side by side with small gap, label "× ${c.cantidad} unidades" visible,`
-    : `single centered isolated unit,`;
+  const cant = c.cantidad || 1;
+  if (cant > 1) {
+    return [
+      `Technical 3D product illustration of ${cant} identical industrial metal shelving units placed side by side with small gap between them.`,
+      `Strictly maintain real-world proportions per unit: ${c.torre}m height, ${c.largoTotal}m total width, ${prof} depth.${depthNote}`,
+      `Each unit has ${c.niveles} shelf levels and 2 vertical dark charcoal columns (#1A1A1A) with X-cross diagonal bracing.`,
+      `${c.niveles} bright orange horizontal beams (#E65100) per unit, one per level.`,
+      shelf,
+      `3/4 perspective view from front-right corner showing depth clearly.`,
+      `Pure white background.`,
+      `Dimension arrows on the first unit: ${c.torre}m ALTO, ${prof} PROFUNDO, ${c.largoUtil}m LARGO ÚTIL.`,
+      `"× ${cant} unidades" label visible.`,
+      `Black rounded rectangle label showing "Carga máx. por nivel: ${c.cap}".`,
+      `"ESTANTEK" watermark text repeated in diagonal grid pattern as a semi-transparent overlay IN FRONT of all units (not behind), 30% opacity, gray color — watermark must partially cover shelving to prevent image theft.`,
+      `Technical illustration style, sharp clean lines, flat studio lighting.`,
+    ].join('\n');
+  }
   return [
-    `Technical 3D illustration of an industrial metal shelving unit,`,
-    `${nLabel}`,
-    `clean white background with faint "ESTANTEK" watermark pattern,`,
-    `${c.niveles} shelf levels, ${c.torre}m tall x ${c.largoTotal}m wide x ${_profLabel(String(c.prof))} deep,`,
-    `dark charcoal/black steel frame columns with X-cross diagonal bracing,`,
-    `bright orange horizontal load beams (#E65100),`,
-    `natural wood MDF shelf panels (honey/light brown color),`,
-    `3/4 perspective view from front-right corner,`,
-    `black dimension arrows showing: ${c.torre}m ALTO, ${_profLabel(String(c.prof))} PROFUNDO, ${c.largoUtil}m LARGO ÚTIL,`,
-    `small black label box showing "Carga máx. por nivel: ${c.cap}",`,
-    `technical product illustration style, isometric-like, sharp edges, no shadows, flat studio lighting, high detail`,
+    `Technical 3D product illustration of an industrial metal shelving unit.`,
+    `Strictly maintain real-world proportions: ${c.torre}m height, ${c.largoTotal}m total width, ${prof} depth — depth must be clearly visible and realistic in 3/4 view.${depthNote}`,
+    `${c.niveles} shelf levels.`,
+    `2 vertical dark charcoal columns (#1A1A1A) with X-cross diagonal steel bracing between them.`,
+    `${c.niveles} bright orange horizontal load beams (#E65100), one per level.`,
+    shelf,
+    `3/4 perspective view from front-right corner showing depth clearly.`,
+    `Pure white background.`,
+    `Black dimension arrows: ${c.torre}m label on left side (ALTO), ${prof} label on front-left (PROFUNDO), ${c.largoUtil}m label on bottom (LARGO ÚTIL).`,
+    `Black rounded rectangle label showing "Carga máx. por nivel: ${c.cap}".`,
+    `"ESTANTEK" watermark text repeated in diagonal grid pattern as a semi-transparent overlay IN FRONT of the shelving unit (not behind), 30% opacity, gray color — watermark must partially cover the shelving to prevent copying.`,
+    `Technical illustration style, clean sharp edges, isometric-like perspective, flat studio lighting, no cast shadows.`,
   ].join('\n');
 }
 
 // ── B) Mockup bodega — instalado y cargado ───────────────────
 function buildWarehouseMockupPrompt(c) {
+  const prof  = _profLabel(String(c.prof));
+  const shelf = _shelfDesc(c.entrepano);
   if (c.modo === 'LINEA') {
     return [
       `Photorealistic commercial warehouse mockup,`,
       `a fully installed ${c.modulos}-module connected industrial metal shelving run,`,
-      `continuous modular structure ${c.largoTotal}m wide × ${c.torre}m tall × ${_profLabel(String(c.prof))} deep,`,
-      `${c.modulos+1} dark charcoal/black steel uprights (intermediate columns shared between modules),`,
-      `bright orange horizontal beams (#E65100), natural wood MDF shelf panels,`,
-      `${c.niveles} levels per module fully loaded with organized cardboard boxes and packaged inventory,`,
-      `${c.cap} per level load capacity,`,
-      `clean industrial warehouse interior, polished concrete floor, high-bay overhead lighting,`,
-      `wide perspective shot capturing the full length of the shelving run,`,
-      `subtle ESTANTEK watermark on visible upright columns,`,
-      `professional commercial photography, sharp focus, no people`,
+      `${c.torre}m tall × ${c.largoTotal}m wide × ${prof} deep, ${c.niveles} levels per module,`,
+      `${_colDescLinea(c.modulos)}`,
+      `bright orange horizontal beams (#E65100). ${shelf}`,
+      `All levels fully loaded with organized cardboard boxes and packaged inventory.`,
+      `${c.cap} per level load capacity.`,
+      `Clean industrial warehouse interior, polished concrete floor, high-bay overhead lighting,`,
+      `wide perspective shot showing the full length of the shelving run and its depth.`,
+      `"ESTANTEK" watermark as semi-transparent overlay IN FRONT of the shelving, 30% opacity.`,
+      `Professional commercial photography, sharp focus, no people.`,
     ].join('\n');
   }
+  const cant = c.cantidad || 1;
   return [
     `Photorealistic commercial warehouse mockup,`,
-    `a single fully installed industrial metal shelving unit in active use,`,
-    `${c.torre}m tall × ${c.largoTotal}m wide × ${_profLabel(String(c.prof))} deep, ${c.niveles} shelf levels,`,
-    `dark charcoal/black steel uprights with X-cross side bracing,`,
-    `bright orange horizontal load beams (#E65100), natural wood MDF shelf panels,`,
-    `all levels neatly loaded with organized cardboard boxes and packaged products,`,
-    `${c.cap} per level load capacity,`,
-    `clean industrial warehouse interior, polished concrete floor, overhead industrial bay lighting,`,
-    `three-quarter perspective view, unit centered and prominent in frame,`,
-    `subtle ESTANTEK watermark visible on steel uprights,`,
-    `professional commercial photography, sharp focus, no people`,
+    `${cant > 1 ? `${cant} identical industrial metal shelving units side by side,` : 'a single fully installed industrial metal shelving unit,'}`,
+    `${c.torre}m tall × ${c.largoTotal}m wide × ${prof} deep, ${c.niveles} shelf levels.`,
+    `2 dark charcoal/black uprights per unit (#1A1A1A) with X-cross bracing. ${shelf}`,
+    `Bright orange horizontal load beams (#E65100). All levels neatly loaded with organized products.`,
+    `${c.cap} per level load capacity.`,
+    `Clean industrial warehouse interior, polished concrete floor, overhead bay lighting,`,
+    `three-quarter perspective view showing depth clearly.`,
+    `"ESTANTEK" watermark as semi-transparent overlay IN FRONT of the shelving, 30% opacity.`,
+    `Professional commercial photography, sharp focus, no people.`,
   ].join('\n');
 }
 
 // ── C) Mockup comercial — imagen aspiracional ────────────────
 function buildCommercialMockupPrompt(c) {
+  const prof  = _profLabel(String(c.prof));
+  const shelf = _shelfDesc(c.entrepano);
   if (c.modo === 'LINEA') {
     return [
-      `Aspirational commercial product image, large-format commercial storage showroom,`,
-      `a premium ${c.modulos}-module connected shelving system as the hero of the shot,`,
-      `${c.largoTotal}m wide × ${c.torre}m tall × ${_profLabel(String(c.prof))} deep,`,
-      `${c.modulos+1} dark charcoal/black steel uprights — shared intermediate columns — bright orange accent beams (#E65100),`,
-      `natural wood MDF shelf panels, ${c.niveles} levels per module stocked with neatly organized products,`,
-      `${c.cap} per level,`,
-      `bright clean commercial space, warm professional lighting, wide-angle impressive perspective,`,
-      `brand-friendly composition, subtle ESTANTEK logo watermark on upright columns,`,
-      `aspirational high-end sales imagery, premium quality, no people`,
+      `Aspirational commercial product image, large-format showroom or well-organized distribution center,`,
+      `a premium ${c.modulos}-module connected shelving system as the hero of the shot.`,
+      `${c.torre}m tall × ${c.largoTotal}m total width × ${prof} deep, ${c.niveles} levels per module.`,
+      `${_colDescLinea(c.modulos)}`,
+      `Bright orange accent beams (#E65100). ${shelf}`,
+      `All levels stocked with neatly organized products. ${c.cap} per level.`,
+      `Bright clean commercial space, warm professional studio lighting, wide impressive angle.`,
+      `"ESTANTEK" watermark as semi-transparent overlay IN FRONT of the system, 30% opacity.`,
+      `Brand-friendly composition, aspirational high-end imagery, no people.`,
     ].join('\n');
   }
+  const cant = c.cantidad || 1;
   return [
-    `Aspirational commercial product image, tidy organized showroom or boutique warehouse,`,
-    `a single premium industrial metal shelving unit as the hero of the frame,`,
-    `${c.torre}m tall × ${c.largoTotal}m wide × ${_profLabel(String(c.prof))} deep, ${c.niveles} beautifully organized levels,`,
-    `dark charcoal/black steel uprights with X-cross bracing, bright orange accent beams (#E65100),`,
-    `natural wood MDF shelf panels, products and boxes displayed cleanly on every level,`,
-    `${c.cap} per level,`,
-    `warm professional studio lighting, brand-friendly composition,`,
-    `subtle ESTANTEK logo watermark visible on steel frame,`,
-    `aspirational high-end sales imagery, premium quality, no people`,
+    `Aspirational commercial product image, premium industrial showroom.`,
+    `${cant > 1 ? `${cant} identical industrial shelving units side by side,` : 'A single premium industrial metal shelving unit as the hero of the frame,'}`,
+    `${c.torre}m tall × ${c.largoTotal}m wide × ${prof} deep, ${c.niveles} beautifully organized levels.`,
+    `2 dark charcoal/black uprights (#1A1A1A) with X-cross bracing. Bright orange accent beams (#E65100).`,
+    `${shelf} Products and boxes displayed cleanly on every level. ${c.cap} per level.`,
+    `Warm professional studio lighting, brand-friendly composition.`,
+    `"ESTANTEK" watermark as semi-transparent overlay IN FRONT of the shelving, 30% opacity.`,
+    `Aspirational high-end sales imagery, premium quality, no people.`,
   ].join('\n');
 }
 
@@ -2254,11 +2346,16 @@ function agregarDesdeConfig() {
 
     const porLinea = numTorres * torPrice + costVigas + costEnts;
 
+    const largoModuloDesc = configGrupos.length === 1
+      ? `${configGrupos[0].largo}m`
+      : configGrupos.map(g => `${g.cant}×${g.largo}m`).join(', ');
     const nombre = [
-      `Línea de ${totalMods} módulos unidos — Torre ${tipoN} ${torre}m × ${profFull}`,
-      `${niveles} niveles | Entrepaño ${entNFull} × ${profL}`,
-      `Largo útil total: ${largoUtil.toFixed(2)}m | Largo total con torres: ${largoTot}m`,
-      `Torres: ${numTorres} (intermedias compartidas) | Capacidad: ${cap} por nivel`,
+      `Sistema de estantería industrial en línea continua — ${totalMods} módulos unidos,`,
+      `${torre}m de altura × ${largoUtil.toFixed(2)}m de largo útil total × ${profL} de profundidad.`,
+      `${numTorres} torres ${tipoN} (las intermedias se comparten entre módulos).`,
+      `Entrepaños de ${entNFull.toLowerCase()} de ${largoModuloDesc} por módulo, ${niveles} niveles.`,
+      `Largo total del sistema incluyendo torres externas: ${largoTot}m.`,
+      `Capacidad de carga: ${cap} por nivel por módulo.`,
     ].join('\n');
 
     addProducto(nombre, cantidad, porLinea, desgloseItems);
@@ -2270,15 +2367,21 @@ function agregarDesdeConfig() {
     if (!vigaPrice || !entPrice) return;
     const largoTot = (parseFloat(largo) + 0.14).toFixed(2);
 
-    const prefijo = cantidad > 1 ? `${cantidad} estantes independientes — ` : '';
-    const nombre = [
-      `${prefijo}Torre ${tipoN} ${torre}m × ${profFull}`,
-      `${niveles} niveles | Entrepaño ${entNFull} ${largo}m × ${profL}`,
-      cantidad > 1
-        ? `Largo útil por estante: ${largo}m | Largo total por estante: ${largoTot}m`
-        : `Largo útil: ${largo}m | Largo total con torres: ${largoTot}m`,
-      `Capacidad: ${cap} por nivel`,
-    ].join('\n');
+    const nombre = cantidad > 1
+      ? [
+          `${cantidad} estanterías industriales ${tipoN} de ${niveles} niveles,`,
+          `${torre}m de altura × ${largo}m de largo útil × ${profL} de profundidad c/u.`,
+          `Estructura metálica con entrepaños de ${entNFull.toLowerCase()}.`,
+          `Largo total por unidad incluyendo torres: ${largoTot}m.`,
+          `Capacidad de carga: ${cap} por nivel.`,
+        ].join('\n')
+      : [
+          `Estantería industrial ${tipoN} de ${niveles} niveles,`,
+          `${torre}m de altura × ${largo}m de largo útil × ${profL} de profundidad.`,
+          `Estructura metálica con entrepaños de ${entNFull.toLowerCase()}.`,
+          `Largo total del estante incluyendo torres: ${largoTot}m.`,
+          `Capacidad de carga: ${cap} por nivel.`,
+        ].join('\n');
 
     const desglose = [
       { desc: `Torres ${tipoN} ${torre}m × ${profL}`,      cant: 2,           precioUnit: torPrice  },
