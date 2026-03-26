@@ -488,6 +488,29 @@ html, body { background: var(--bg); color: var(--negro); font-family: 'Barlow', 
   background: #f0fdf4; padding: 5px 8px; border-radius: 4px;
 }
 .render-pdf-note::before { content: '✓'; font-weight: 800; }
+
+/* ── DESGLOSE MINI (producto configurado) ────────────────── */
+.desglose-mini {
+  background: var(--azul-claro); border: 1px solid #bfdbfe;
+  border-radius: 6px; padding: 8px 12px; margin: 6px 0 8px; font-size: 11px;
+}
+.desglose-mini-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 3px 0; border-bottom: 1px dashed #bfdbfe; color: var(--gris-osc);
+}
+.desglose-mini-row:last-child { border-bottom: none; }
+.desglose-mini-total {
+  display: flex; justify-content: flex-end; padding-top: 5px;
+  font-weight: 700; color: var(--azul); font-size: 12px;
+}
+
+/* ── PROMPT RENDER ───────────────────────────────────────── */
+.render-prompt-box {
+  width: 100%; min-height: 100px; background: var(--bg);
+  border: 1.5px solid var(--borde); border-radius: 6px;
+  color: var(--negro); font-family: monospace; font-size: 10px;
+  padding: 10px 12px; resize: vertical; line-height: 1.6; margin-top: 8px;
+}
 </style>
 </head>
 <body>
@@ -793,42 +816,27 @@ html, body { background: var(--bg); color: var(--negro); font-family: 'Barlow', 
     </div>
   </div>
 
-  <!-- Render IA -->
+  <!-- Generador de prompts IA -->
   <div class="render-card">
     <div class="render-header">
-      <div class="render-label">Vista previa con IA</div>
-      <div class="render-sub">Genera una imagen realista del estante cotizado</div>
+      <div class="render-label">🎨 Generar prompt visual</div>
+      <div class="render-sub">Listo para Flow, Midjourney, fal.ai o ChatGPT Image</div>
     </div>
-
-    <!-- Estado: inicial (sin render) -->
-    <div id="renderInicial">
-      <button class="btn-secondary" id="btnRender" onclick="generarRender()" style="margin:0;width:100%">
-        🎨 Generar render del estante
-      </button>
+    <div class="field" style="margin-bottom:12px;">
+      <label>Estilo de imagen</label>
+      <select id="renderEstilo">
+        <option value="technical">Técnica — ilustración catálogo industrial</option>
+        <option value="warehouse">Mockup bodega — instalado y en uso</option>
+        <option value="commercial">Mockup comercial — imagen aspiracional</option>
+      </select>
     </div>
-
-    <!-- Estado: cargando -->
-    <div id="renderLoading" style="display:none">
-      <div class="render-loading-box">
-        <div class="spinner"></div>
-        <span>Generando imagen con IA… puede tomar 10–20 segundos</span>
-      </div>
-    </div>
-
-    <!-- Estado: resultado -->
-    <div id="renderResultado" style="display:none">
-      <img id="renderImg" src="" alt="Render del estante" class="render-img">
-      <div class="render-actions">
-        <button class="btn-secondary" onclick="generarRender()">↻ Regenerar</button>
-        <button class="btn-secondary" onclick="descargarRender()">↓ Descargar</button>
-      </div>
-      <div class="render-pdf-note">Se incluirá automáticamente en el PDF</div>
-    </div>
-
-    <!-- Estado: error -->
-    <div id="renderError" style="display:none" class="render-error">
-      <span class="render-error-msg" id="renderErrorMsg">Error al generar</span>
-      <button class="render-retry" onclick="generarRender()">Reintentar</button>
+    <button class="btn-secondary" onclick="copiarPromptRender()" style="margin:0 0 0;width:100%">
+      📋 Generar prompt
+    </button>
+    <textarea id="renderPromptTxt" class="render-prompt-box" readonly
+      placeholder="Selecciona un estilo y haz clic en Generar prompt…"></textarea>
+    <div id="renderCopiado" style="display:none" class="render-pdf-note">
+      Prompt copiado — pégalo en tu herramienta de IA preferida
     </div>
   </div>
 
@@ -966,8 +974,10 @@ function goTab(i) {
 // ════════════════════════════════════════════════════════════
 // PRODUCTOS
 // ════════════════════════════════════════════════════════════
-function addProducto(nombre, cantidad, precio) {
-  productos.push({ id: Date.now() + Math.random(), nombre, cantidad, precio, iva: false });
+function addProducto(nombre, cantidad, precio, desglose) {
+  const item = { id: Date.now() + Math.random(), nombre, cantidad, precio, iva: false };
+  if (desglose) item.desglose = desglose;
+  productos.push(item);
   renderProductos();
 }
 
@@ -999,8 +1009,49 @@ function renderProductos() {
     calcTotales(); return;
   }
   lista.innerHTML = productos.map(p => {
-    const sub = p.cantidad * p.precio;
+    const sub    = p.cantidad * p.precio;
     const ivaAmt = p.iva ? Math.round(sub * 0.19) : 0;
+
+    if (p.desglose) {
+      // ── Ítem configurado — muestra desglose de piezas ──────
+      const firstLine = (p.nombre || '').split('\n')[0];
+      const desgloseRows = p.desglose.map(d =>
+        `<div class="desglose-mini-row">
+           <span>${d.cant}× ${esc(d.desc)}</span>
+           <span>${fmt(d.cant * d.precioUnit)}</span>
+         </div>`
+      ).join('');
+      return `<div class="producto-card" id="prod-${p.id}">
+        <button class="btn-del" onclick="removeProducto(${p.id})">×</button>
+        <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;color:var(--azul);text-transform:uppercase;margin-bottom:4px;">Estantería configurada</div>
+        <div style="font-size:13px;color:var(--negro);font-weight:600;margin-bottom:6px;padding-right:32px;line-height:1.4;">${esc(firstLine)}</div>
+        <div class="desglose-mini">
+          ${desgloseRows}
+          <div class="desglose-mini-total">Por unidad: ${fmt(p.precio)}</div>
+        </div>
+        <div class="producto-row">
+          <div class="field" style="margin-bottom:0">
+            <label>Cantidad</label>
+            <input type="number" value="${p.cantidad}" min="1"
+              oninput="updateField(${p.id},'cantidad',parseInt(this.value)||1)">
+          </div>
+          <div class="field" style="margin-bottom:0">
+            <label>Precio ud.</label>
+            <input type="number" value="${p.precio}" min="0"
+              oninput="updateField(${p.id},'precio',parseInt(this.value)||0)">
+          </div>
+        </div>
+        <div class="subtotal-line">
+          <label class="iva-toggle ${p.iva ? 'on' : ''}" onclick="toggleIva(${p.id})">
+            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+            <span>IVA 19%${p.iva ? ' (+' + fmt(ivaAmt) + ')' : ''}</span>
+          </label>
+          <span class="subtotal-val" id="sub-${p.id}">${fmt(sub + ivaAmt)}</span>
+        </div>
+      </div>`;
+    }
+
+    // ── Ítem manual ─────────────────────────────────────────
     return `<div class="producto-card" id="prod-${p.id}">
       <button class="btn-del" onclick="removeProducto(${p.id})">×</button>
       <div class="field producto-desc" style="margin-bottom:8px;">
@@ -1098,10 +1149,10 @@ function nuevaCotizacion() {
   cotNumActual = (cotNumActual || 2420) + 1;
   productos = [];
   renderUrl = null;
-  document.getElementById('renderInicial').style.display  = 'block';
-  document.getElementById('renderLoading').style.display  = 'none';
-  document.getElementById('renderResultado').style.display = 'none';
-  document.getElementById('renderError').style.display    = 'none';
+  const _ta = document.getElementById('renderPromptTxt');
+  const _cop = document.getElementById('renderCopiado');
+  if (_ta) _ta.value = '';
+  if (_cop) _cop.style.display = 'none';
   ['clienteNombre','clienteEmpresa','clienteTel','clienteCiudad','clienteEmail','clienteDesc','notas']
     .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   document.querySelectorAll('.validez-btn').forEach((b, i) => b.classList.toggle('active', i === 0));
@@ -1447,23 +1498,109 @@ async function generarPDFDesdeSnap(s) {
   y += 9;
 
   // ── Filas productos
+  const FOOTER_MARGIN = 28; // espacio mínimo antes del footer para iniciar nueva página
+  function addPageIfNeeded(neededH) {
+    if (y + neededH > PH - FOOTER_MARGIN) {
+      // Footer en página actual
+      doc.setFillColor(...AZL); doc.rect(0, PH-14, PW, 14, 'F');
+      doc.setFillColor(...NRJ); doc.rect(0, PH-14, PW, 1.5, 'F');
+      doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(180,180,180);
+      doc.text('@estantek  ·  ventas@estantek.co  ·  estantek.co  ·  WhatsApp 319 638 8282', PW/2, PH-7.5, { align:'center' });
+      doc.text('Showroom: Calle 22 Bis # 43 B – 05, Quinta Paredes, Bogotá', PW/2, PH-3.5, { align:'center' });
+      doc.addPage();
+      // Header ligero en la nueva página
+      doc.setFillColor(...AZL); doc.rect(0, 0, PW, 10, 'F');
+      doc.setFillColor(...NRJ); doc.rect(0, 8.5, PW, 1.5, 'F');
+      doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(12);
+      doc.text('ESTANTEK', ML, 7);
+      doc.setFont('helvetica','normal'); doc.setFontSize(7);
+      doc.text(cotStr, PW-MR, 7, { align:'right' });
+      y = 18;
+    }
+  }
+
   (s.prods || []).forEach((p, i) => {
     const sub = p.cantidad * p.precio;
     const ivaAmt = p.iva ? Math.round(sub * 0.19) : 0;
-    doc.setFillColor(...(i % 2 === 0 ? [255,255,255] : BG));
-    doc.rect(ML, y, IW, 10, 'F');
-    doc.setDrawColor(...GRL); doc.setLineWidth(0.2); doc.line(ML, y+10, ML+IW, y+10);
-    doc.setTextColor(...NGR); doc.setFont('helvetica','normal'); doc.setFontSize(9.5);
-    const nl = doc.splitTextToSize(p.nombre || '(sin descripción)', IW*0.5);
-    doc.text(nl, ML+5, y+7);
-    doc.text(String(p.cantidad), ML+IW*0.54, y+7, { align:'right' });
-    doc.setTextColor(...GRS);
-    doc.text(p.precio ? fmt(p.precio) : '—', ML+IW*0.73, y+7, { align:'right' });
-    doc.setTextColor(...(p.iva ? NRJ : GRS));
-    doc.text(p.iva ? fmt(ivaAmt) : '—', ML+IW*0.85, y+7, { align:'right' });
-    doc.setFont('helvetica','bold'); doc.setTextColor(...NGR);
-    doc.text(p.precio ? fmt(sub+ivaAmt) : '—', ML+IW, y+7, { align:'right' });
-    y += Math.max(10, nl.length*5+4);
+    const rowBg = i % 2 === 0 ? [255,255,255] : BG;
+
+    if (p.desglose && p.desglose.length) {
+      // ── Producto configurado con desglose ──────────────────
+      const lines = (p.nombre || '').split('\n');
+      const firstLine = lines[0] || '(sin descripción)';
+      const extraLines = lines.slice(1).filter(Boolean); // dimensiones / piezas
+
+      // Estimar altura total del bloque antes de dibujarlo
+      const headerH = 8 + (extraLines.length > 0 ? extraLines.length * 4.5 + 1 : 0);
+      const desgloseH = p.desglose.length * 7.5;
+      const subtotalH = 8;
+      addPageIfNeeded(headerH + desgloseH + subtotalH + 4);
+
+      // Cabecera del ítem
+      doc.setFillColor(...rowBg); doc.rect(ML, y, IW, headerH, 'F');
+      doc.setFillColor(...AZL); doc.rect(ML, y, 2.5, headerH, 'F');
+      doc.setTextColor(...NGR); doc.setFont('helvetica','bold'); doc.setFontSize(9);
+      doc.text(doc.splitTextToSize(firstLine, IW*0.52)[0], ML+6, y+6);
+      if (extraLines.length) {
+        doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(...GRS);
+        extraLines.forEach((ln, li) => doc.text(ln, ML+6, y+10.5+li*4.5));
+      }
+      doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(...NGR);
+      doc.text(String(p.cantidad), ML+IW*0.54, y+6, { align:'right' });
+      doc.setFontSize(7.5); doc.setTextColor(...GRS);
+      doc.text('unidades', ML+IW*0.54, y+10, { align:'right' });
+      y += headerH;
+
+      // Filas del desglose
+      p.desglose.forEach(d => {
+        addPageIfNeeded(8);
+        const dCant = d.cant * p.cantidad;
+        doc.setFillColor(236, 244, 255); doc.rect(ML, y, IW, 7.5, 'F');
+        doc.setDrawColor(...GRL); doc.setLineWidth(0.15);
+        doc.line(ML+10, y+7.5, ML+IW, y+7.5);
+        doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...GRS);
+        doc.text('· ' + d.desc, ML+12, y+5.2);
+        doc.setTextColor(...NGR);
+        doc.text(String(dCant) + ' pzas', ML+IW*0.54, y+5.2, { align:'right' });
+        doc.setTextColor(...GRS);
+        doc.text(fmt(d.precioUnit), ML+IW*0.73, y+5.2, { align:'right' });
+        doc.text('—', ML+IW*0.85, y+5.2, { align:'right' });
+        doc.setFont('helvetica','bold'); doc.setTextColor(...NGR);
+        doc.text(fmt(dCant * d.precioUnit), ML+IW, y+5.2, { align:'right' });
+        y += 7.5;
+      });
+
+      // Subtotal del ítem
+      addPageIfNeeded(9);
+      doc.setFillColor(214, 229, 255); doc.rect(ML, y, IW, 8, 'F');
+      doc.setDrawColor(...AZL); doc.setLineWidth(0.3); doc.line(ML, y+8, ML+IW, y+8);
+      doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(...AZL);
+      doc.text('Subtotal ítem' + (p.cantidad > 1 ? ' ×' + p.cantidad : ''), ML+12, y+5.5);
+      doc.setTextColor(...(p.iva ? NRJ : GRS));
+      doc.text(p.iva ? fmt(ivaAmt) : '—', ML+IW*0.85, y+5.5, { align:'right' });
+      doc.setFont('helvetica','bold'); doc.setTextColor(...NGR); doc.setFontSize(9);
+      doc.text(fmt(sub + ivaAmt), ML+IW, y+5.5, { align:'right' });
+      y += 8 + 5;
+
+    } else {
+      // ── Producto manual (sin desglose) ─────────────────────
+      const nl = doc.splitTextToSize(p.nombre || '(sin descripción)', IW*0.5);
+      const rowH = Math.max(10, nl.length * 5 + 4);
+      addPageIfNeeded(rowH);
+      doc.setFillColor(...rowBg);
+      doc.rect(ML, y, IW, rowH, 'F');
+      doc.setDrawColor(...GRL); doc.setLineWidth(0.2); doc.line(ML, y+rowH, ML+IW, y+rowH);
+      doc.setTextColor(...NGR); doc.setFont('helvetica','normal'); doc.setFontSize(9.5);
+      doc.text(nl, ML+5, y+7);
+      doc.text(String(p.cantidad), ML+IW*0.54, y+7, { align:'right' });
+      doc.setTextColor(...GRS);
+      doc.text(p.precio ? fmt(p.precio) : '—', ML+IW*0.73, y+7, { align:'right' });
+      doc.setTextColor(...(p.iva ? NRJ : GRS));
+      doc.text(p.iva ? fmt(ivaAmt) : '—', ML+IW*0.85, y+7, { align:'right' });
+      doc.setFont('helvetica','bold'); doc.setTextColor(...NGR);
+      doc.text(p.precio ? fmt(sub+ivaAmt) : '—', ML+IW, y+7, { align:'right' });
+      y += rowH;
+    }
   });
   y += 3;
 
@@ -1547,84 +1684,171 @@ function showToast(msg, type = 'ok') {
 }
 
 // ════════════════════════════════════════════════════════════
-// RENDER IA — fal.ai
+// GENERADOR DE PROMPTS — 3 estilos, 100% local, sin API
 // ════════════════════════════════════════════════════════════
-let renderUrl = null;
+let renderUrl = null; // reservado para compatibilidad con guardado
 
-async function generarRender() {
-  const btnRender   = document.getElementById('btnRender');
-  const loading     = document.getElementById('renderLoading');
-  const resultado   = document.getElementById('renderResultado');
-  const errorDiv    = document.getElementById('renderError');
-  const inicial     = document.getElementById('renderInicial');
+// ── Leer configuración actual del configurador ───────────────
+function getConfigForPrompt() {
+  const tipo      = configTipo;
+  const modo      = configModo;
+  const torre     = parseFloat(document.getElementById('confTorre')?.value  || '2.40');
+  const largo     = parseFloat(document.getElementById('confLargo')?.value  || '2.40');
+  const prof      = parseFloat(document.getElementById('confProf')?.value   || '0.60');
+  const niveles   = parseInt(document.getElementById('confNiveles')?.value) || 3;
+  const entrepano = document.getElementById('confEntrepano')?.value || 'ECONOMICA';
+  const modulos   = modo === 'LINEA'
+    ? Math.max(2, parseInt(document.getElementById('confModulos')?.value) || 3) : 1;
+  const largoUtil  = modo === 'LINEA'
+    ? (modulos * largo).toFixed(2) : largo.toFixed(2);
+  const largoTotal = modo === 'LINEA'
+    ? (modulos * largo + (modulos + 1) * 0.07).toFixed(2)
+    : (largo + 0.14).toFixed(2);
+  const cap      = tipo === 'SEMIPESADA' ? '500 kg' : '2,000 kg';
+  const shelfMat = {
+    ECONOMICA:   'natural pine wood',
+    PREMIUM:     'premium dark hardwood',
+    GALVANIZADO: 'perforated galvanized steel',
+  }[entrepano] || 'wooden';
+  const tipoDesc = tipo === 'PESADA' ? 'heavy-duty' : 'medium-duty';
+  return { tipo, modo, torre, largo, prof, niveles, modulos, entrepano,
+           largoUtil, largoTotal, cap, shelfMat, tipoDesc };
+}
 
-  // Mostrar loading
-  if (inicial)    inicial.style.display  = 'none';
-  if (resultado)  resultado.style.display = 'none';
-  if (errorDiv)   errorDiv.style.display  = 'none';
-  if (loading)    loading.style.display   = 'block';
-  if (btnRender)  btnRender.disabled = true;
-
-  try {
-    const payload = {
-      tipo:      configTipo,
-      torre:     document.getElementById('confTorre')?.value    || '2.40',
-      largo:     document.getElementById('confLargo')?.value    || '2.40',
-      prof:      document.getElementById('confProf')?.value     || '0.60',
-      entrepano: document.getElementById('confEntrepano')?.value || 'ECONOMICA',
-      niveles:   parseInt(document.getElementById('confNiveles')?.value) || 3,
-      modoLinea: configModo === 'LINEA',
-      modulos:   configModo === 'LINEA'
-                   ? Math.max(2, parseInt(document.getElementById('confModulos')?.value) || 3)
-                   : 1,
-      descripcion: document.getElementById('clienteDesc')?.value || '',
-    };
-
-    const res = await fetch(API + '/api/render', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify(payload),
-    });
-
-    const data = await res.json();
-    if (!res.ok || data.error) throw new Error(data.error || 'Error ' + res.status);
-
-    renderUrl = data.imageUrl;
-    document.getElementById('renderImg').src = renderUrl;
-    loading.style.display   = 'none';
-    resultado.style.display = 'block';
-    showToast('Render generado', 'ok');
-  } catch (e) {
-    if (loading)  loading.style.display   = 'none';
-    if (inicial)  inicial.style.display   = 'block';
-    document.getElementById('renderErrorMsg').textContent = e.message;
-    if (errorDiv) errorDiv.style.display  = 'block';
-    showToast('Error al generar render', 'err');
-  } finally {
-    if (btnRender) btnRender.disabled = false;
+// ── A) Ilustración técnica tipo catálogo industrial ──────────
+function buildTechnicalPrompt(c) {
+  const isLinea = c.modo === 'LINEA';
+  if (isLinea) {
+    const nShared = c.modulos - 1;
+    return (
+      `Isometric technical product illustration of a connected ${c.tipoDesc} industrial metal shelving system, ` +
+      `${c.modulos} modules in a continuous row, engineering catalog style, ` +
+      `pure white background, precise clean vector-like linework, minimal consistent shadows, ` +
+      `royal blue powder-coated steel uprights (#1565C0) with X-cross diagonal bracing, ` +
+      `${c.modulos + 1} vertical uprights total — ${nShared} shared intermediate column${nShared !== 1 ? 's' : ''} visible between modules, ` +
+      `bright orange horizontal load beams (#E65100), ${c.shelfMat} shelf panels, ` +
+      `${c.niveles} shelf levels per module, ` +
+      `overall dimensions: ${c.torre}m tall × ${c.largoTotal}m total width × ${c.prof}m deep, ` +
+      `clean dimension arrows: useful span ${c.largoUtil}m, total width ${c.largoTotal}m, height ${c.torre}m, depth ${c.prof}m, ` +
+      `load capacity label: ${c.cap} per level, ` +
+      `subtle repeating ESTANTEK watermark pattern at 5% opacity across white background, ` +
+      `professional industrial catalog render, high detail, no people, no loose objects`
+    );
+  } else {
+    return (
+      `Isometric technical product illustration of a single ${c.tipoDesc} industrial metal shelving unit, ` +
+      `centered isolated rack on pure white background, engineering catalog style, ` +
+      `precise clean vector-like linework, minimal consistent shadow at base, ` +
+      `royal blue powder-coated steel uprights (#1565C0) with X-cross diagonal bracing on side panels, ` +
+      `bright orange horizontal load beams (#E65100), ${c.shelfMat} shelf panels, ` +
+      `${c.niveles} shelf levels, ` +
+      `dimensions: ${c.torre}m tall × ${c.largoTotal}m wide × ${c.prof}m deep, ` +
+      `clean dimension arrows indicating height ${c.torre}m, width ${c.largoTotal}m, depth ${c.prof}m, ` +
+      `load capacity label: ${c.cap} per level, ` +
+      `subtle repeating ESTANTEK watermark pattern at 5% opacity across background, ` +
+      `professional industrial catalog render, high detail, no people`
+    );
   }
 }
 
-function descargarRender() {
-  if (!renderUrl) return;
-  const a = document.createElement('a');
-  a.href = renderUrl;
-  a.download = 'ESTANTEK_render_' + getCotStr() + '.jpg';
-  a.target = '_blank';
-  a.click();
+// ── B) Mockup bodega — instalado y cargado ───────────────────
+function buildWarehouseMockupPrompt(c) {
+  const isLinea = c.modo === 'LINEA';
+  if (isLinea) {
+    const nShared = c.modulos - 1;
+    return (
+      `Photorealistic commercial warehouse mockup, ` +
+      `a fully installed ${c.modulos}-module connected ${c.tipoDesc} metal shelving run, ` +
+      `continuous modular structure ${c.largoTotal}m wide × ${c.torre}m tall × ${c.prof}m deep, ` +
+      `${c.modulos + 1} blue uprights including ${nShared} shared intermediate column${nShared !== 1 ? 's' : ''} clearly visible along the full run, ` +
+      `royal blue powder-coated steel frame (#1565C0), bright orange horizontal beams (#E65100), ` +
+      `${c.shelfMat} shelf panels, ${c.niveles} levels per module fully loaded with organized cardboard boxes and packaged inventory, ` +
+      `${c.cap} per level load capacity, ` +
+      `clean industrial warehouse interior, polished concrete floor, high-bay overhead lighting, ` +
+      `wide perspective shot capturing the full length of the shelving run with visible depth, ` +
+      `subtle ESTANTEK logo watermark on visible upright columns, ` +
+      `professional commercial photography, cinematic quality, sharp focus, no people`
+    );
+  } else {
+    return (
+      `Photorealistic commercial warehouse mockup, ` +
+      `a single fully installed ${c.tipoDesc} metal shelving unit in active use, ` +
+      `${c.torre}m tall × ${c.largoTotal}m wide × ${c.prof}m deep, ${c.niveles} shelf levels, ` +
+      `royal blue powder-coated steel uprights (#1565C0) with X-cross side bracing, ` +
+      `bright orange horizontal load beams (#E65100), ${c.shelfMat} shelf panels, ` +
+      `all levels neatly loaded with organized cardboard boxes and packaged products, ` +
+      `${c.cap} per level load capacity, ` +
+      `clean industrial warehouse interior, polished concrete floor, overhead industrial bay lighting, ` +
+      `three-quarter perspective view, unit centered and prominent in frame, slight depth of field, ` +
+      `subtle ESTANTEK logo watermark visible on steel uprights, ` +
+      `professional commercial photography, cinematic quality, sharp focus, no people`
+    );
+  }
 }
 
-async function cargarImagenBase64(url) {
-  try {
-    const res  = await fetch(url);
-    const blob = await res.blob();
-    return await new Promise(resolve => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result);
-      reader.onerror  = () => resolve(null);
-      reader.readAsDataURL(blob);
-    });
-  } catch { return null; }
+// ── C) Mockup comercial — imagen aspiracional de venta ───────
+function buildCommercialMockupPrompt(c) {
+  const isLinea = c.modo === 'LINEA';
+  const env = isLinea
+    ? 'large-format commercial storage showroom or well-organized distribution warehouse'
+    : 'tidy organized storage room, hardware store back area, or boutique warehouse showroom';
+  if (isLinea) {
+    const nShared = c.modulos - 1;
+    return (
+      `Aspirational commercial product image, ${env}, ` +
+      `a premium ${c.modulos}-module connected ${c.tipoDesc} shelving system as the hero of the shot, ` +
+      `continuous modular structure ${c.largoTotal}m wide × ${c.torre}m tall × ${c.prof}m deep, ` +
+      `${c.modulos + 1} blue steel uprights — ${nShared} shared intermediate column${nShared !== 1 ? 's' : ''} creating a strong rhythmic structure — bright orange accent beams (#E65100), ` +
+      `royal blue powder-coated frame (#1565C0), ${c.shelfMat} shelf panels, ` +
+      `${c.niveles} levels per module stocked with neatly organized products, ${c.cap} per level, ` +
+      `bright clean commercial space, warm professional lighting, wide-angle impressive perspective, ` +
+      `brand-friendly composition, subtle ESTANTEK logo watermark on upright columns, ` +
+      `aspirational high-end sales imagery, premium quality, no people`
+    );
+  } else {
+    return (
+      `Aspirational commercial product image, ${env}, ` +
+      `a single premium ${c.tipoDesc} metal shelving unit as the hero of the frame, ` +
+      `${c.torre}m tall × ${c.largoTotal}m wide × ${c.prof}m deep, ${c.niveles} beautifully organized levels, ` +
+      `royal blue powder-coated steel uprights (#1565C0) with X-cross side bracing, bright orange accent beams (#E65100), ` +
+      `${c.shelfMat} shelf panels, products and boxes displayed cleanly on every level, ${c.cap} per level, ` +
+      `bright clean retail or showroom atmosphere, warm natural and studio lighting mix, ` +
+      `brand-friendly composition with the unit prominent and well-lit, ` +
+      `subtle ESTANTEK logo watermark visible on steel frame, ` +
+      `aspirational high-end sales imagery, premium quality, no people`
+    );
+  }
+}
+
+// ── Despachador ──────────────────────────────────────────────
+function buildPromptByStyle(config, style) {
+  switch (style) {
+    case 'warehouse':  return buildWarehouseMockupPrompt(config);
+    case 'commercial': return buildCommercialMockupPrompt(config);
+    default:           return buildTechnicalPrompt(config);
+  }
+}
+
+// ── Generar, mostrar en pantalla y copiar al portapapeles ────
+function copiarPromptRender() {
+  const style  = document.getElementById('renderEstilo')?.value || 'technical';
+  const config = getConfigForPrompt();
+  const prompt = buildPromptByStyle(config, style);
+
+  const ta  = document.getElementById('renderPromptTxt');
+  const cop = document.getElementById('renderCopiado');
+  if (ta) ta.value = prompt;
+
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(prompt)
+      .then(() => {
+        if (cop) { cop.style.display = 'flex'; setTimeout(() => cop.style.display = 'none', 4000); }
+        showToast('Prompt copiado — pégalo en tu herramienta preferida', 'ok');
+      })
+      .catch(() => showToast('Selecciona el texto del cuadro y cópialo', 'ok'));
+  } else {
+    showToast('Selecciona el texto del cuadro y cópialo', 'ok');
+  }
 }
 
 // ════════════════════════════════════════════════════════════
@@ -1711,15 +1935,17 @@ function setConfigTipo(tipo) {
   const opt3m   = document.getElementById('confOpt3m');
 
   if (tipo === 'SEMIPESADA') {
-    // Torre máx 2.40m
-    opt3m.disabled = true;
+    opt3m.style.display = 'none'; opt3m.disabled = true;
     if (torreEl.value === '3.00') torreEl.value = '2.40';
-    // Largo máx 2.80m
-    document.querySelectorAll('.conf-opt-pesada').forEach(o => { o.disabled = true; });
+    document.querySelectorAll('.conf-opt-pesada').forEach(o => {
+      o.style.display = 'none'; o.disabled = true;
+    });
     if (['3.00','3.20'].includes(largoEl.value)) largoEl.value = '2.80';
   } else {
-    opt3m.disabled = false;
-    document.querySelectorAll('.conf-opt-pesada').forEach(o => { o.disabled = false; });
+    opt3m.style.display = ''; opt3m.disabled = false;
+    document.querySelectorAll('.conf-opt-pesada').forEach(o => {
+      o.style.display = ''; o.disabled = false;
+    });
   }
 
   actualizarNivelesMax();
@@ -1752,8 +1978,8 @@ function actualizarNivelesMax() {
 
   // Torre 2.00m → máx 5, 2.40m → máx 6, 3.00m → máx 7
   const max = torre === '3.00' ? 7 : torre === '2.40' ? 6 : 5;
-  opt6.disabled = max < 6;
-  opt7.disabled = max < 7;
+  opt6.disabled = max < 6; opt6.style.display = max < 6 ? 'none' : '';
+  opt7.disabled = max < 7; opt7.style.display = max < 7 ? 'none' : '';
   if (parseInt(nivelesEl.value) > max) nivelesEl.value = String(max);
 }
 
@@ -1892,9 +2118,11 @@ function agregarDesdeConfig() {
   const entPrice  = precios.entrepanos?.[entrepano]?.[largo]?.[prof];
   if (!torPrice || !vigaPrice || !entPrice) return;
 
-  const tipoN = tipo === 'SEMIPESADA' ? 'Semipesada' : 'Pesada';
-  const entN  = { ECONOMICA: 'Ec.', PREMIUM: 'Prem.', GALVANIZADO: 'Galv.' }[entrepano];
-  const profL = prof === '0.60' ? '60cm' : prof === '0.80' ? '80cm' : prof + 'm';
+  const tipoN    = tipo === 'SEMIPESADA' ? 'Semipesada' : 'Pesada';
+  const entNFull = { ECONOMICA: 'Madera Económica', PREMIUM: 'Madera Premium', GALVANIZADO: 'Galvanizado' }[entrepano];
+  const profL    = prof === '0.60' ? '60cm' : prof === '0.80' ? '80cm' : prof + 'm';
+  const profFull = prof === '0.60' ? '60cm profundidad' : prof === '0.80' ? '80cm profundidad' : prof + 'm profundidad';
+  const cap      = tipo === 'SEMIPESADA' ? '500 kg' : '2.000 kg';
 
   if (configModo === 'LINEA') {
     const modulos   = Math.max(2, parseInt(document.getElementById('confModulos').value) || 3);
@@ -1902,18 +2130,39 @@ function agregarDesdeConfig() {
     const numVigas  = modulos * niveles * 2;
     const numEnts   = modulos * niveles;
     const largoUtil = (modulos * parseFloat(largo)).toFixed(2);
-    const cap       = tipo === 'SEMIPESADA' ? '500 kg/niv.' : '2.000 kg/niv.';
-    const ctx       = `Línea ${modulos} mód. ${tipoN} — L.útil ${largoUtil}m ${cap}`;
+    const largoTot  = (modulos * parseFloat(largo) + (modulos + 1) * 0.07).toFixed(2);
 
-    // Agrega 3 ítems de componentes (torres / vigas / entrepanos)
-    addProducto(`Torres ${tipoN} ${torre}m×${profL} [${ctx}]`,         numTorres * cantidad, torPrice);
-    addProducto(`Vigas ${tipoN} ${largo}m [${ctx}]`,                   numVigas  * cantidad, vigaPrice);
-    addProducto(`Entrepanos ${entN} ${largo}m×${profL} [${ctx}]`,      numEnts   * cantidad, entPrice);
-    showToast(`Línea de ${modulos} módulos agregada (3 ítems)`, 'ok');
+    const nombre = [
+      `Línea de ${modulos} módulos unidos — Torre ${tipoN} ${torre}m × ${profFull} — ${niveles} niveles — Entrepaño ${entNFull} ${largo}m × ${profL}`,
+      `Largo útil: ${largoUtil}m | Largo total: ${largoTot}m`,
+      `Piezas: ${numTorres} torres + ${numVigas} vigas + ${numEnts} entrepanos`,
+      `Capacidad: ${cap} por nivel`,
+    ].join('\n');
+
+    const desglose = [
+      { desc: `Torres ${tipoN} ${torre}m × ${profL}`,      cant: numTorres, precioUnit: torPrice  },
+      { desc: `Vigas ${tipoN} ${largo}m`,                  cant: numVigas,  precioUnit: vigaPrice },
+      { desc: `Entrepanos ${entNFull} ${largo}m × ${profL}`, cant: numEnts, precioUnit: entPrice  },
+    ];
+    const porLinea = numTorres * torPrice + numVigas * vigaPrice + numEnts * entPrice;
+    addProducto(nombre, cantidad, porLinea, desglose);
+    showToast(`Línea de ${modulos} módulos agregada`, 'ok');
   } else {
+    const largoTot = (parseFloat(largo) + 0.14).toFixed(2);
+
+    const nombre = [
+      `Torre ${tipoN} ${torre}m × ${profFull} — ${niveles} niveles — Entrepaño ${entNFull} ${largo}m × ${profL}`,
+      `Largo útil: ${largo}m | Largo total con torres: ${largoTot}m`,
+      `Capacidad: ${cap} por nivel`,
+    ].join('\n');
+
+    const desglose = [
+      { desc: `Torres ${tipoN} ${torre}m × ${profL}`,      cant: 2,           precioUnit: torPrice  },
+      { desc: `Vigas ${tipoN} ${largo}m`,                  cant: 2 * niveles, precioUnit: vigaPrice },
+      { desc: `Entrepanos ${entNFull} ${largo}m × ${profL}`, cant: niveles,   precioUnit: entPrice  },
+    ];
     const unitario = 2 * torPrice + 2 * niveles * vigaPrice + niveles * entPrice;
-    const desc  = `Estantería ${tipoN} ${largo}m × ${torre}m × ${profL} — ${niveles} niv. — Ent. ${entN}`;
-    addProducto(desc, cantidad, unitario);
+    addProducto(nombre, cantidad, unitario, desglose);
     showToast('Estantería agregada al presupuesto', 'ok');
   }
 }
