@@ -79,14 +79,81 @@ async function handlePrecios(env) {
 // prof_m    : 0.60 | 0.80 | 1.00 | 1.20  (solo para TORRE y ENTREPANO)
 // precio_cop: número entero en pesos colombianos
 
+// Soporta dos formatos:
+// 1. Formato Google Sheets (secciones TORRES / VIGAS / ENTREPANOS)
+// 2. Formato plano legado (tipo,categoria,descripcion,largo_m,prof_m,precio_cop)
 function parsePreciosCSV(csv) {
-  const lines = csv.trim().split('\n').filter(l => l.trim());
-  const result = { torres: {}, vigas: {}, entrepanos: {}, otros: {} };
-  if (lines.length < 2) return result;
+  const result = {
+    torres: {},
+    vigas: {},
+    entrepanos: {},
+    otros: { PROTECTOR: 60000, INSTALACION: 0, TRANSPORTE: 0 },
+  };
 
+  const lines = csv.trim().split('\n');
+  const firstMeaningful = lines.find(l => l.trim() && !/^,+$/.test(l.trim()));
+  const firstUpper = (firstMeaningful || '').trim().toUpperCase();
+
+  // ── Formato Google Sheets (secciones) ──────────────────────────
+  if (firstUpper === 'TORRES' || firstUpper === 'VIGAS' || firstUpper === 'ENTREPANOS') {
+    let section = null;
+    let skipNext = false;
+
+    for (const line of lines) {
+      const raw = line.trim();
+      if (!raw || /^,+$/.test(raw)) continue;
+
+      const f = parseCsvLine(raw);
+      const h = (f[0] || '').trim().toUpperCase();
+
+      if (h === 'TORRES')                                { section = 'TORRES';    skipNext = true; continue; }
+      if (h === 'VIGAS')                                 { section = 'VIGAS';     skipNext = true; continue; }
+      if (h === 'ENTREPANOS' || h === 'ENTREP\u00d1ANOS') { section = 'ENTREPANOS'; skipNext = true; continue; }
+      if (h === 'OTROS' || h === 'OTRO')                 { section = 'OTROS';     skipNext = true; continue; }
+
+      if (skipNext) { skipNext = false; continue; }
+      if (!section) continue;
+
+      if (section === 'TORRES') {
+        const alt  = normM(f[0]);
+        const prof = normM(f[1]);
+        const p    = parsePrice(f[2]);
+        if (!alt || !prof || !p) continue;
+        for (const cat of ['SEMIPESADA', 'PESADA']) {
+          if (!result.torres[cat]) result.torres[cat] = {};
+          if (!result.torres[cat][alt]) result.torres[cat][alt] = {};
+          result.torres[cat][alt][prof] = p;
+        }
+      } else if (section === 'VIGAS') {
+        const cat  = normCat(f[0]);
+        const l    = normM(f[1]);
+        const p    = parsePrice(f[2]);
+        if (!cat || !l || !p) continue;
+        if (!result.vigas[cat]) result.vigas[cat] = {};
+        result.vigas[cat][l] = p;
+      } else if (section === 'ENTREPANOS') {
+        const cat  = normCat(f[0]);
+        const l    = normM(f[1]);
+        const prof = normM(f[2]);
+        const p    = parsePrice(f[3]);
+        if (!cat || !l || !prof || !p) continue;
+        if (!result.entrepanos[cat]) result.entrepanos[cat] = {};
+        if (!result.entrepanos[cat][l]) result.entrepanos[cat][l] = {};
+        result.entrepanos[cat][l][prof] = p;
+      } else if (section === 'OTROS') {
+        const cat = (f[0] || '').trim().toUpperCase();
+        const p   = parsePrice(f[1]) || parsePrice(f[2]);
+        if (cat && p) result.otros[cat] = p;
+      }
+    }
+    return result;
+  }
+
+  // ── Formato plano legado ────────────────────────────────────────
   lines.slice(1).forEach(line => {
+    if (!line.trim()) return;
     const [tipo, cat, _desc, largo, prof, precioRaw] = parseCsvLine(line);
-    const precio = parseInt((precioRaw || '').replace(/[^\d]/g, '')) || 0;
+    const precio = parsePrice(precioRaw);
     if (!tipo || !precio) return;
 
     const t = tipo.trim().toUpperCase();
@@ -111,6 +178,34 @@ function parsePreciosCSV(csv) {
   });
 
   return result;
+}
+
+function normM(val) {
+  if (!val) return '';
+  val = val.trim();
+  const cm = val.match(/^(\d+)\s*cm$/i);
+  if (cm) return (parseInt(cm[1]) / 100).toFixed(2);
+  const m = val.match(/^([\d.]+)\s*m$/i);
+  if (m) return parseFloat(m[1]).toFixed(2);
+  return '';
+}
+
+function normCat(val) {
+  const map = {
+    'SEMIPESADA': 'SEMIPESADA', 'PESADA': 'PESADA',
+    'MADERA ECONOMICA': 'ECONOMICA', 'MADERA ECON\u00d3MICA': 'ECONOMICA',
+    'MADERA PREMIUM': 'PREMIUM',
+    'GALVANIZADO': 'GALVANIZADO',
+    'PROTECTOR': 'PROTECTOR',
+    'INSTALACION': 'INSTALACION', 'INSTALACI\u00d3N': 'INSTALACION',
+    'TRANSPORTE': 'TRANSPORTE',
+  };
+  const k = (val || '').trim().toUpperCase();
+  return map[k] || k;
+}
+
+function parsePrice(val) {
+  return parseInt((val || '').replace(/[^\d]/g, '')) || 0;
 }
 
 function parseCsvLine(line) {
