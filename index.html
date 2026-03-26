@@ -596,6 +596,21 @@ html, body { background: var(--bg); color: var(--negro); font-family: 'Barlow', 
       </button>
     </div>
 
+    <!-- Modo: Individual / Línea de módulos -->
+    <div style="margin-bottom:14px;">
+      <div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--gris-clr);margin-bottom:8px;">Modo</div>
+      <div class="config-tipo">
+        <button class="tipo-btn active" id="modoBtnInd" onclick="setConfigModo('INDIVIDUAL')">
+          <strong>Individual</strong>
+          <small>1 módulo aislado</small>
+        </button>
+        <button class="tipo-btn" id="modoBtnLinea" onclick="setConfigModo('LINEA')">
+          <strong>Línea unida</strong>
+          <small>Módulos unidos</small>
+        </button>
+      </div>
+    </div>
+
     <!-- Dimensiones -->
     <div class="field-row">
       <div class="field">
@@ -651,9 +666,15 @@ html, body { background: var(--bg); color: var(--negro); font-family: 'Barlow', 
         </select>
       </div>
       <div class="field">
-        <label>Cantidad de estanterías</label>
+        <label id="confCantidadLabel">Cantidad de estanterías</label>
         <input type="number" id="confCantidad" value="1" min="1" max="99" oninput="onConfigChange()">
       </div>
+    </div>
+
+    <!-- Solo visible en modo LÍNEA DE MÓDULOS -->
+    <div id="confModulosRow" class="field" style="display:none;margin-bottom:12px;">
+      <label>Módulos por línea</label>
+      <input type="number" id="confModulos" value="3" min="2" max="20" oninput="onConfigChange()">
     </div>
 
     <!-- Desglose de precio -->
@@ -1076,6 +1097,11 @@ function nuevaCotizacion() {
   // El número nuevo se calcula sumando 1 al actual
   cotNumActual = (cotNumActual || 2420) + 1;
   productos = [];
+  renderUrl = null;
+  document.getElementById('renderInicial').style.display  = 'block';
+  document.getElementById('renderLoading').style.display  = 'none';
+  document.getElementById('renderResultado').style.display = 'none';
+  document.getElementById('renderError').style.display    = 'none';
   ['clienteNombre','clienteEmpresa','clienteTel','clienteCiudad','clienteEmail','clienteDesc','notas']
     .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   document.querySelectorAll('.validez-btn').forEach((b, i) => b.classList.toggle('active', i === 0));
@@ -1547,6 +1573,10 @@ async function generarRender() {
       prof:      document.getElementById('confProf')?.value     || '0.60',
       entrepano: document.getElementById('confEntrepano')?.value || 'ECONOMICA',
       niveles:   parseInt(document.getElementById('confNiveles')?.value) || 3,
+      modoLinea: configModo === 'LINEA',
+      modulos:   configModo === 'LINEA'
+                   ? Math.max(2, parseInt(document.getElementById('confModulos')?.value) || 3)
+                   : 1,
       descripcion: document.getElementById('clienteDesc')?.value || '',
     };
 
@@ -1603,6 +1633,7 @@ async function cargarImagenBase64(url) {
 
 let precios = null;
 let configTipo = 'SEMIPESADA';
+let configModo = 'INDIVIDUAL';
 
 // Precios de referencia exactos del Excel Tabla_Estantek_completada_1.xlsx
 // (fallback si la API no responde — la fuente verdadera es el Google Sheet)
@@ -1611,6 +1642,7 @@ const PRECIOS_FALLBACK = {
     SEMIPESADA: {
       '2.00': { '0.60': 220000, '0.80': 220000, '1.00': 220000, '1.20': 240000 },
       '2.40': { '0.60': 264000, '0.80': 264000, '1.00': 264000, '1.20': 288000 },
+      '3.00': { '0.60': 330000, '0.80': 330000, '1.00': 330000, '1.20': 360000 },
     },
     PESADA: {
       '2.00': { '0.60': 220000, '0.80': 220000, '1.00': 220000, '1.20': 240000 },
@@ -1626,7 +1658,7 @@ const PRECIOS_FALLBACK = {
     ECONOMICA: {
       '2.00': { '0.60': 90000, '0.80': 95000, '1.00': 100000, '1.20': 120000 },
       '2.40': { '0.60': 110000, '0.80': 120000, '1.00': 130000, '1.20': 150000 },
-      '2.80': { '0.60': 130000, '1.00': 150000, '1.20': 160000 },
+      '2.80': { '0.60': 130000, '0.80': 130000, '1.00': 150000, '1.20': 160000 },
       '3.00': { '0.60': 130000, '0.80': 140000, '1.00': 160000, '1.20': 180000 },
       '3.20': { '0.60': 140000, '0.80': 150000, '1.00': 170000, '1.20': 200000 },
     },
@@ -1640,7 +1672,7 @@ const PRECIOS_FALLBACK = {
     GALVANIZADO: {
       '2.00': { '0.60': 120000, '0.80': 140000, '1.00': 150000, '1.20': 190000 },
       '2.40': { '0.60': 140000, '0.80': 160000, '1.00': 200000, '1.20': 240000 },
-      '2.80': { '0.80': 220000, '1.00': 240000, '1.20': 260000 },
+      '2.80': { '0.60': 200000, '0.80': 220000, '1.00': 240000, '1.20': 260000 },
       '3.00': { '0.60': 220000, '0.80': 240000, '1.00': 260000, '1.20': 280000 },
       '3.20': { '0.60': 240000, '0.80': 260000, '1.00': 280000, '1.20': 300000 },
     },
@@ -1694,6 +1726,23 @@ function setConfigTipo(tipo) {
   actualizarConfigUI();
 }
 
+// ── Modo: Individual / Línea de módulos ────────────────────
+function setConfigModo(modo) {
+  configModo = modo;
+  document.getElementById('modoBtnInd').classList.toggle('active', modo === 'INDIVIDUAL');
+  document.getElementById('modoBtnLinea').classList.toggle('active', modo === 'LINEA');
+  const modRow   = document.getElementById('confModulosRow');
+  const cantLbl  = document.getElementById('confCantidadLabel');
+  if (modo === 'LINEA') {
+    modRow.style.display  = 'block';
+    cantLbl.textContent   = 'Cant. de líneas';
+  } else {
+    modRow.style.display  = 'none';
+    cantLbl.textContent   = 'Cantidad de estanterías';
+  }
+  actualizarConfigUI();
+}
+
 // ── Niveles máximos según altura de torre ──────────────────
 function actualizarNivelesMax() {
   const torre = document.getElementById('confTorre').value;
@@ -1723,13 +1772,13 @@ function actualizarConfigUI() {
     return;
   }
 
-  const tipo       = configTipo;
-  const torre      = document.getElementById('confTorre').value;
-  const largo      = document.getElementById('confLargo').value;
-  const prof       = document.getElementById('confProf').value;
-  const entrepano  = document.getElementById('confEntrepano').value;
-  const niveles    = parseInt(document.getElementById('confNiveles').value) || 3;
-  const cantidad   = parseInt(document.getElementById('confCantidad').value) || 1;
+  const tipo      = configTipo;
+  const torre     = document.getElementById('confTorre').value;
+  const largo     = document.getElementById('confLargo').value;
+  const prof      = document.getElementById('confProf').value;
+  const entrepano = document.getElementById('confEntrepano').value;
+  const niveles   = parseInt(document.getElementById('confNiveles').value) || 3;
+  const cantidad  = parseInt(document.getElementById('confCantidad').value) || 1;
 
   const torPrice  = precios.torres?.[tipo]?.[torre]?.[prof];
   const vigaPrice = precios.vigas?.[tipo]?.[largo];
@@ -1741,39 +1790,88 @@ function actualizarConfigUI() {
     return;
   }
 
-  const costTorres    = 2 * torPrice;
-  const costVigas     = 2 * niveles * vigaPrice;
-  const costEntrepanos = niveles * entPrice;
-  const unitario      = costTorres + costVigas + costEntrepanos;
-  const total         = unitario * cantidad;
+  const tipoN    = tipo === 'SEMIPESADA' ? 'Semipesada' : 'Pesada';
+  const entN     = { ECONOMICA: 'Madera Económica', PREMIUM: 'Madera Premium', GALVANIZADO: 'Galvanizado' }[entrepano];
+  const profLbl  = prof === '0.60' ? '60 cm' : prof === '0.80' ? '80 cm' : prof + ' m';
 
-  const tipoNombre = tipo === 'SEMIPESADA' ? 'Semipesada' : 'Pesada';
-  const entNombre  = { ECONOMICA: 'Madera Económica', PREMIUM: 'Madera Premium', GALVANIZADO: 'Galvanizado' }[entrepano];
-  const profLabel  = prof === '0.60' ? '60 cm' : prof === '0.80' ? '80 cm' : prof + ' m';
+  if (configModo === 'LINEA') {
+    const modulos   = Math.max(2, parseInt(document.getElementById('confModulos').value) || 3);
+    const numTorres = modulos + 1;
+    const numVigas  = modulos * niveles * 2;
+    const numEnts   = modulos * niveles;
+    const largoUtil = (modulos * parseFloat(largo)).toFixed(2);
+    const largoTot  = (modulos * parseFloat(largo) + (modulos + 1) * 0.07).toFixed(2);
+    const cap       = tipo === 'SEMIPESADA' ? '500 kg' : '2.000 kg';
 
-  desglose.innerHTML = `
-    <div class="conf-row">
-      <span>2 Torres ${tipoNombre} ${torre}m × ${profLabel}</span>
-      <span>${fmt(costTorres)}</span>
-    </div>
-    <div class="conf-row">
-      <span>${2 * niveles} Vigas ${largo}m &nbsp;<small style="color:var(--gris-clr)">(${niveles} niv. × 2)</small></span>
-      <span>${fmt(costVigas)}</span>
-    </div>
-    <div class="conf-row">
-      <span>${niveles} Entrepanos ${entNombre} ${largo}×${profLabel}</span>
-      <span>${fmt(costEntrepanos)}</span>
-    </div>
-    <div class="conf-div"></div>
-    <div class="conf-row subtotal">
-      <span>Precio por estantería</span>
-      <span>${fmt(unitario)}</span>
-    </div>
-    ${cantidad > 1
-      ? `<div class="conf-row grand"><span>Total (${cantidad} uds.)</span><span>${fmt(total)}</span></div>`
-      : `<div class="conf-row grand"><span>Total</span><span>${fmt(total)}</span></div>`
-    }
-  `;
+    const costTorres = numTorres * torPrice;
+    const costVigas  = numVigas  * vigaPrice;
+    const costEnts   = numEnts   * entPrice;
+    const porLinea   = costTorres + costVigas + costEnts;
+    const total      = porLinea * cantidad;
+
+    desglose.innerHTML = `
+      <div style="font-size:11px;font-weight:700;color:var(--azul);margin-bottom:8px;letter-spacing:0.5px;text-transform:uppercase;">
+        Línea de ${modulos} módulos unidos
+      </div>
+      <div style="font-size:11px;color:var(--naranja);background:var(--naranja-cl);padding:5px 9px;border-radius:4px;margin-bottom:8px;display:flex;gap:14px;flex-wrap:wrap;font-weight:600;">
+        <span>L. útil: ${largoUtil}m</span>
+        <span>L. total: ${largoTot}m</span>
+        <span>Carga máx: ${cap}/nivel</span>
+      </div>
+      <div class="conf-row">
+        <span>${numTorres} Torres ${tipoN} ${torre}m × ${profLbl}</span>
+        <span>${fmt(costTorres)}</span>
+      </div>
+      <div class="conf-row">
+        <span>${numVigas} Vigas ${largo}m &nbsp;<small style="color:var(--gris-clr)">(${modulos} mód. × ${niveles} niv. × 2)</small></span>
+        <span>${fmt(costVigas)}</span>
+      </div>
+      <div class="conf-row">
+        <span>${numEnts} Entrepanos ${entN} ${largo}m × ${profLbl}</span>
+        <span>${fmt(costEnts)}</span>
+      </div>
+      <div class="conf-div"></div>
+      <div class="conf-row subtotal">
+        <span>Precio por línea</span>
+        <span>${fmt(porLinea)}</span>
+      </div>
+      ${cantidad > 1
+        ? `<div class="conf-row grand"><span>Total (${cantidad} líneas)</span><span>${fmt(total)}</span></div>`
+        : `<div class="conf-row grand"><span>Total</span><span>${fmt(total)}</span></div>`
+      }
+    `;
+  } else {
+    // ── INDIVIDUAL ───────────────────────────────────────────
+    const costTorres    = 2 * torPrice;
+    const costVigas     = 2 * niveles * vigaPrice;
+    const costEntrepanos = niveles * entPrice;
+    const unitario      = costTorres + costVigas + costEntrepanos;
+    const total         = unitario * cantidad;
+
+    desglose.innerHTML = `
+      <div class="conf-row">
+        <span>2 Torres ${tipoN} ${torre}m × ${profLbl}</span>
+        <span>${fmt(costTorres)}</span>
+      </div>
+      <div class="conf-row">
+        <span>${2 * niveles} Vigas ${largo}m &nbsp;<small style="color:var(--gris-clr)">(${niveles} niv. × 2)</small></span>
+        <span>${fmt(costVigas)}</span>
+      </div>
+      <div class="conf-row">
+        <span>${niveles} Entrepanos ${entN} ${largo}m × ${profLbl}</span>
+        <span>${fmt(costEntrepanos)}</span>
+      </div>
+      <div class="conf-div"></div>
+      <div class="conf-row subtotal">
+        <span>Precio por estantería</span>
+        <span>${fmt(unitario)}</span>
+      </div>
+      ${cantidad > 1
+        ? `<div class="conf-row grand"><span>Total (${cantidad} uds.)</span><span>${fmt(total)}</span></div>`
+        : `<div class="conf-row grand"><span>Total</span><span>${fmt(total)}</span></div>`
+      }
+    `;
+  }
   btn.disabled = false;
 }
 
@@ -1794,15 +1892,30 @@ function agregarDesdeConfig() {
   const entPrice  = precios.entrepanos?.[entrepano]?.[largo]?.[prof];
   if (!torPrice || !vigaPrice || !entPrice) return;
 
-  const unitario = 2 * torPrice + 2 * niveles * vigaPrice + niveles * entPrice;
-
   const tipoN = tipo === 'SEMIPESADA' ? 'Semipesada' : 'Pesada';
   const entN  = { ECONOMICA: 'Ec.', PREMIUM: 'Prem.', GALVANIZADO: 'Galv.' }[entrepano];
   const profL = prof === '0.60' ? '60cm' : prof === '0.80' ? '80cm' : prof + 'm';
-  const desc  = `Estantería ${tipoN} ${largo}m × ${torre}m × ${profL} — ${niveles} niv. — Ent. ${entN}`;
 
-  addProducto(desc, cantidad, unitario);
-  showToast('Estantería agregada al presupuesto', 'ok');
+  if (configModo === 'LINEA') {
+    const modulos   = Math.max(2, parseInt(document.getElementById('confModulos').value) || 3);
+    const numTorres = modulos + 1;
+    const numVigas  = modulos * niveles * 2;
+    const numEnts   = modulos * niveles;
+    const largoUtil = (modulos * parseFloat(largo)).toFixed(2);
+    const cap       = tipo === 'SEMIPESADA' ? '500 kg/niv.' : '2.000 kg/niv.';
+    const ctx       = `Línea ${modulos} mód. ${tipoN} — L.útil ${largoUtil}m ${cap}`;
+
+    // Agrega 3 ítems de componentes (torres / vigas / entrepanos)
+    addProducto(`Torres ${tipoN} ${torre}m×${profL} [${ctx}]`,         numTorres * cantidad, torPrice);
+    addProducto(`Vigas ${tipoN} ${largo}m [${ctx}]`,                   numVigas  * cantidad, vigaPrice);
+    addProducto(`Entrepanos ${entN} ${largo}m×${profL} [${ctx}]`,      numEnts   * cantidad, entPrice);
+    showToast(`Línea de ${modulos} módulos agregada (3 ítems)`, 'ok');
+  } else {
+    const unitario = 2 * torPrice + 2 * niveles * vigaPrice + niveles * entPrice;
+    const desc  = `Estantería ${tipoN} ${largo}m × ${torre}m × ${profL} — ${niveles} niv. — Ent. ${entN}`;
+    addProducto(desc, cantidad, unitario);
+    showToast('Estantería agregada al presupuesto', 'ok');
+  }
 }
 
 // ════════════════════════════════════════════════════════════

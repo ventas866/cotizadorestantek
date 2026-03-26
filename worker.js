@@ -231,21 +231,35 @@ function buildRenderPrompt(body) {
   const prof      = parseFloat(body.prof)  || 0.6;
   const niveles   = parseInt(body.niveles) || 3;
   const entrepano = (body.entrepano || 'ECONOMICA').toUpperCase();
+  const modoLinea = !!body.modoLinea;
+  const modulos   = Math.max(2, parseInt(body.modulos) || 3);
 
-  const tipoDesc = tipo === 'PESADA' ? 'heavy-duty industrial' : 'medium-duty industrial';
-  const entDesc  = {
-    ECONOMICA:  'light pine wood shelf panels',
-    PREMIUM:    'premium dark wood shelf panels',
-    GALVANIZADO:'perforated galvanized steel shelf panels',
-  }[entrepano] || 'wooden shelf panels';
+  const entDesc = {
+    ECONOMICA:   'light pine wood',
+    PREMIUM:     'premium dark wood',
+    GALVANIZADO: 'perforated galvanized steel',
+  }[entrepano] || 'wooden';
 
-  return (
-    `Professional studio product photograph of a ${tipoDesc} metal storage shelving rack, ` +
-    `${torre}m tall, ${largo}m wide, ${prof}m deep, ${niveles} shelf levels, ${entDesc}, ` +
-    `royal blue powder-coated steel upright columns, bright orange horizontal beams and connectors, ` +
-    `clean white background, soft diffused studio lighting, photorealistic product photo, ` +
-    `no text, no people, no watermarks, warehouse industrial shelving unit`
-  );
+  if (modoLinea) {
+    const largoTotal    = ((modulos * largo) + (modulos + 1) * 0.07).toFixed(2);
+    const nIntermediate = modulos - 1;
+    return (
+      `Industrial metal shelving line, photorealistic product photo, white background, studio lighting, ` +
+      `${modulos} connected units, ${niveles} levels per unit, ` +
+      `${torre}m tall x ${largoTotal}m wide x ${prof}m deep, ` +
+      `blue steel frame (#1565C0), orange horizontal beams (#E65100), ` +
+      `${entDesc} shelves, ${nIntermediate} shared intermediate columns visible, ` +
+      `warehouse product shot, sharp focus, professional`
+    );
+  } else {
+    const largoTotal = (largo + 0.14).toFixed(2);
+    return (
+      `Industrial metal shelving unit, photorealistic product photo, white background, studio lighting, ` +
+      `${niveles} levels, ${torre}m tall x ${largoTotal}m wide x ${prof}m deep, ` +
+      `blue steel frame (#1565C0), orange horizontal beams (#E65100), ` +
+      `${entDesc} shelves, warehouse product shot, sharp focus, professional`
+    );
+  }
 }
 
 async function handleRender(env, request) {
