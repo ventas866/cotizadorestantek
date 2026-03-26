@@ -8,20 +8,21 @@
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
-  --azul:        #1565C0;
-  --azul-osc:    #0D47A1;
-  --azul-claro:  #E8F0FE;
+  /* ── Paleta ESTANTEK: naranja + negro ── */
+  --azul:        #E65100;   /* alias → naranja (todos los var(--azul) son ahora naranja) */
+  --azul-osc:    #CC4400;   /* naranja oscuro para hover */
+  --azul-claro:  #FFF3E0;   /* naranja muy claro para fondos */
   --naranja:     #E65100;
   --naranja-cl:  #FFF3E0;
   --madera:      #D4A574;
   --madera-cl:   #FDF6EE;
   --blanco:      #FFFFFF;
-  --bg:          #F5F7FA;
-  --borde:       #DDE3EC;
+  --bg:          #FAFAFA;
+  --borde:       #E0E0E0;
   --gris-clr:    #6B7280;
   --gris-med:    #9CA3AF;
   --gris-osc:    #374151;
-  --negro:       #111827;
+  --negro:       #1A1A1A;
   --verde-wa:    #25D366;
   --rojo:        #DC2626;
   --sombra-sm:   0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
@@ -33,22 +34,22 @@ html, body { background: var(--bg); color: var(--negro); font-family: 'Barlow', 
 
 /* ── HEADER ─────────────────────────────────────────────── */
 .app-header {
-  background: var(--blanco);
-  border-bottom: 3px solid var(--azul);
+  background: #1A1A1A;
+  border-bottom: 3px solid var(--naranja);
   padding: 12px 16px;
   display: flex; align-items: center; justify-content: space-between;
   position: sticky; top: 0; z-index: 100; gap: 8px;
-  box-shadow: var(--sombra-sm);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.35);
 }
 .header-left { display: flex; flex-direction: column; }
 .app-logo {
   font-family: 'Barlow Condensed', sans-serif; font-size: 27px; font-weight: 900;
-  text-transform: uppercase; line-height: 1; color: var(--negro);
+  text-transform: uppercase; line-height: 1; color: #FFFFFF;
   letter-spacing: -0.5px;
 }
-.app-logo .logo-estan { color: var(--azul); }
+.app-logo .logo-estan { color: var(--naranja); }
 .app-logo .logo-dot   { color: var(--naranja); font-size: 28px; line-height: 0; vertical-align: middle; }
-.app-cot-num { font-size: 10px; color: var(--azul); letter-spacing: 2px; font-weight: 600; margin-top: 3px; }
+.app-cot-num { font-size: 10px; color: rgba(255,255,255,0.6); letter-spacing: 2px; font-weight: 600; margin-top: 3px; }
 .header-right { display: flex; gap: 6px; align-items: center; }
 
 /* ── SYNC STATUS ─────────────────────────────────────────── */
@@ -62,14 +63,14 @@ html, body { background: var(--bg); color: var(--negro); font-family: 'Barlow', 
 @keyframes pulse  { 0%,100%{opacity:1} 50%{opacity:0.35} }
 
 .btn-icon {
-  background: var(--bg); border: 1px solid var(--borde);
-  color: var(--gris-osc); padding: 7px 11px; cursor: pointer;
+  background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.18);
+  color: rgba(255,255,255,0.85); padding: 7px 11px; cursor: pointer;
   font-family: 'Barlow', sans-serif; font-size: 11px; font-weight: 600;
   letter-spacing: 0.5px; text-transform: uppercase;
   transition: all 0.2s; display: flex; align-items: center; gap: 5px;
   border-radius: 4px;
 }
-.btn-icon:hover { border-color: var(--azul); color: var(--azul); background: var(--azul-claro); }
+.btn-icon:hover { border-color: var(--naranja); color: var(--naranja); background: rgba(230,81,0,0.15); }
 .badge {
   background: var(--naranja); color: white;
   font-size: 9px; font-weight: 700; min-width: 16px; height: 16px;
@@ -112,7 +113,7 @@ html, body { background: var(--bg); color: var(--negro); font-family: 'Barlow', 
   transition: border-color 0.2s, box-shadow 0.2s; -webkit-appearance: none;
 }
 .field input:focus, .field textarea:focus, .field select:focus {
-  border-color: var(--azul); box-shadow: 0 0 0 3px rgba(21,101,192,0.12);
+  border-color: var(--naranja); box-shadow: 0 0 0 3px rgba(230,81,0,0.12);
 }
 .field textarea { resize: vertical; min-height: 80px; }
 .field select option { background: var(--blanco); }
@@ -148,7 +149,7 @@ html, body { background: var(--bg); color: var(--negro); font-family: 'Barlow', 
   border-radius: 8px; padding: 14px; margin-bottom: 10px; position: relative;
   box-shadow: var(--sombra-sm); transition: border-color 0.2s, box-shadow 0.2s;
 }
-.producto-card:focus-within { border-color: var(--azul); box-shadow: 0 0 0 3px rgba(21,101,192,0.1); }
+.producto-card:focus-within { border-color: var(--azul); box-shadow: 0 0 0 3px rgba(230,81,0,0.1); }
 .producto-row { display: grid; grid-template-columns: 1fr 76px 108px; gap: 8px; align-items: end; }
 .producto-desc { grid-column: 1 / -1; }
 .btn-del {
@@ -244,9 +245,9 @@ html, body { background: var(--bg); color: var(--negro); font-family: 'Barlow', 
   font-size: 16px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px;
   cursor: pointer; transition: all 0.2s; margin-bottom: 10px; border-radius: 6px;
   display: flex; align-items: center; justify-content: center; gap: 8px;
-  box-shadow: 0 2px 8px rgba(21,101,192,0.3);
+  box-shadow: 0 2px 8px rgba(230,81,0,0.25);
 }
-.btn-primary:hover { background: var(--azul-osc); box-shadow: 0 4px 12px rgba(21,101,192,0.4); }
+.btn-primary:hover { background: var(--azul-osc); box-shadow: 0 4px 12px rgba(230,81,0,0.35); }
 .btn-primary:active { transform: scale(0.99); }
 .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
 .btn-secondary {
@@ -385,7 +386,7 @@ html, body { background: var(--bg); color: var(--negro); font-family: 'Barlow', 
   animation: spin 0.7s linear infinite; flex-shrink: 0;
 }
 .spinner.dark {
-  border-color: rgba(21,101,192,0.2); border-top-color: var(--azul);
+  border-color: rgba(230,81,0,0.2); border-top-color: var(--naranja);
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -409,7 +410,7 @@ html, body { background: var(--bg); color: var(--negro); font-family: 'Barlow', 
 }
 .precios-badge.ok      { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
 .precios-badge.err     { background: #fff7ed; color: var(--naranja); border: 1px solid #fed7aa; }
-.precios-badge.loading { background: var(--azul-claro); color: var(--azul); border: 1px solid #bfdbfe; animation: pulse 1.2s infinite; }
+.precios-badge.loading { background: var(--azul-claro); color: var(--azul); border: 1px solid #fed7aa; animation: pulse 1.2s infinite; }
 
 .config-tipo { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
 .tipo-btn {
@@ -425,7 +426,7 @@ html, body { background: var(--bg); color: var(--negro); font-family: 'Barlow', 
 .tipo-btn.active strong, .tipo-btn.active small { color: white; }
 
 .conf-desglose {
-  background: var(--azul-claro); border: 1px solid #bfdbfe;
+  background: var(--azul-claro); border: 1px solid #fed7aa;
   border-radius: 6px; padding: 12px 14px; margin: 12px 0; font-size: 12px; min-height: 48px;
 }
 .conf-row {
@@ -433,7 +434,7 @@ html, body { background: var(--bg); color: var(--negro); font-family: 'Barlow', 
   padding: 3px 0; color: var(--gris-osc);
 }
 .conf-row span:last-child { color: var(--azul-osc); font-weight: 600; }
-.conf-div { border-top: 1px solid #bfdbfe; margin: 6px 0 2px; }
+.conf-div { border-top: 1px solid #fed7aa; margin: 6px 0 2px; }
 .conf-row.subtotal { padding-top: 4px; color: var(--gris-clr); }
 .conf-row.grand {
   font-size: 15px; font-weight: 700; color: var(--azul);
@@ -491,12 +492,12 @@ html, body { background: var(--bg); color: var(--negro); font-family: 'Barlow', 
 
 /* ── DESGLOSE MINI (producto configurado) ────────────────── */
 .desglose-mini {
-  background: var(--azul-claro); border: 1px solid #bfdbfe;
+  background: var(--azul-claro); border: 1px solid #fed7aa;
   border-radius: 6px; padding: 8px 12px; margin: 6px 0 8px; font-size: 11px;
 }
 .desglose-mini-row {
   display: flex; justify-content: space-between; align-items: center;
-  padding: 3px 0; border-bottom: 1px dashed #bfdbfe; color: var(--gris-osc);
+  padding: 3px 0; border-bottom: 1px dashed #fed7aa; color: var(--gris-osc);
 }
 .desglose-mini-row:last-child { border-bottom: none; }
 .desglose-mini-total {
@@ -1420,8 +1421,8 @@ async function generarPDFDesdeSnap(s) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const PW = 210, PH = 297, ML = 16, MR = 16, IW = 178;
-  // Paleta: azul #1565C0, naranja #E65100, grises neutros
-  const AZL = [21,101,192], NRJ = [230,81,0], NGR = [17,24,39], GRS = [107,114,128], GRL = [221,227,236], BG = [248,250,252];
+  // Paleta: negro #1A1A1A, naranja #E65100
+  const AZL = [26,26,26], NRJ = [230,81,0], NGR = [26,26,26], GRS = [107,114,128], GRL = [224,224,224], BG = [250,250,250];
 
   const fecha = new Date().toLocaleDateString('es-CO', { year:'numeric', month:'long', day:'numeric' });
   const cotStr = getCotStr(s.num);
@@ -1431,27 +1432,27 @@ async function generarPDFDesdeSnap(s) {
     : (s.prods || []).reduce((a, p) => a + (p.iva ? Math.round(p.cantidad * p.precio * 0.19) : 0), 0);
   const grandTotal = subtotal + ivaTotal;
 
-  // ── Header azul
+  // ── Header negro
   doc.setFillColor(...AZL); doc.rect(0, 0, PW, 22, 'F');
   // Barra naranja inferior del header
   doc.setFillColor(...NRJ); doc.rect(0, 20, PW, 2.5, 'F');
-  doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(22);
+  doc.setTextColor(...NRJ); doc.setFont('helvetica','bold'); doc.setFontSize(22);
   doc.text('ESTANTEK', ML, 14);
-  doc.setFont('helvetica','normal'); doc.setFontSize(8);
+  doc.setTextColor(200,200,200); doc.setFont('helvetica','normal'); doc.setFontSize(8);
   doc.text('Estantería Industrial  ·  Colombia', PW-MR, 9, { align:'right' });
   doc.text('ventas@estantek.co  ·  estantek.co  ·  319 638 8282', PW-MR, 15.5, { align:'right' });
 
   // ── Número + recuadro info
   let y = 30;
-  doc.setTextColor(...AZL); doc.setFont('helvetica','bold'); doc.setFontSize(7.5);
+  doc.setTextColor(...NRJ); doc.setFont('helvetica','bold'); doc.setFontSize(7.5);
   doc.text('COTIZACIÓN', ML, y);
   y += 8;
-  doc.setTextColor(...NGR); doc.setFontSize(28); doc.text(cotStr, ML, y);
+  doc.setTextColor(...NRJ); doc.setFontSize(28); doc.text(cotStr, ML, y);
 
   const rxW = 85, rxH = 28, rxX = PW-MR-rxW;
   doc.setFillColor(...BG); doc.rect(rxX, y-20, rxW, rxH, 'F');
   doc.setDrawColor(...GRL); doc.setLineWidth(0.4); doc.rect(rxX, y-20, rxW, rxH, 'S');
-  doc.setFillColor(...AZL); doc.rect(rxX, y-20, 2.5, rxH, 'F');
+  doc.setFillColor(...NRJ); doc.rect(rxX, y-20, 2.5, rxH, 'F');
   [['Fecha', fecha], ['Válida por', s.validez], ['Forma de pago', s.pago]].forEach(([lbl, val], i) => {
     const ry = y - 17 + i * 9;
     doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(...GRS);
@@ -1467,8 +1468,8 @@ async function generarPDFDesdeSnap(s) {
   // ── Bloque cliente
   const cH = s.empresa ? 24 : 18;
   doc.setFillColor(...BG); doc.rect(ML, y, IW, cH, 'F');
-  doc.setFillColor(...AZL); doc.rect(ML, y, 3, cH, 'F');
-  doc.setTextColor(...AZL); doc.setFont('helvetica','bold'); doc.setFontSize(7.5);
+  doc.setFillColor(...NRJ); doc.rect(ML, y, 3, cH, 'F');
+  doc.setTextColor(...NRJ); doc.setFont('helvetica','bold'); doc.setFontSize(7.5);
   doc.text('PARA', ML+7, y+6);
   doc.setTextColor(...NGR); doc.setFontSize(14);
   doc.text(s.nombre, ML+7, y+13);
@@ -1566,7 +1567,7 @@ async function generarPDFDesdeSnap(s) {
       p.desglose.forEach(d => {
         addPageIfNeeded(8);
         const dCant = d.cant * p.cantidad;
-        doc.setFillColor(236, 244, 255); doc.rect(ML, y, IW, 7.5, 'F');
+        doc.setFillColor(255,243,224); doc.rect(ML, y, IW, 7.5, 'F');
         doc.setDrawColor(...GRL); doc.setLineWidth(0.15);
         doc.line(ML+10, y+7.5, ML+IW, y+7.5);
         doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...GRS);
@@ -1583,9 +1584,9 @@ async function generarPDFDesdeSnap(s) {
 
       // Subtotal del ítem
       addPageIfNeeded(9);
-      doc.setFillColor(214, 229, 255); doc.rect(ML, y, IW, 8, 'F');
-      doc.setDrawColor(...AZL); doc.setLineWidth(0.3); doc.line(ML, y+8, ML+IW, y+8);
-      doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(...AZL);
+      doc.setFillColor(255,235,210); doc.rect(ML, y, IW, 8, 'F');
+      doc.setDrawColor(...NRJ); doc.setLineWidth(0.3); doc.line(ML, y+8, ML+IW, y+8);
+      doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(...NRJ);
       doc.text('Subtotal ítem' + (p.cantidad > 1 ? ' ×' + p.cantidad : ''), ML+12, y+5.5);
       doc.setTextColor(...(p.iva ? NRJ : GRS));
       doc.text(p.iva ? fmt(ivaAmt) : '—', ML+IW*0.85, y+5.5, { align:'right' });
@@ -1638,9 +1639,9 @@ async function generarPDFDesdeSnap(s) {
   doc.text('Tiempo de entrega estimado: ' + s.entrega, ML, y); y += 8;
 
   // ── Condiciones
-  doc.setFillColor(...AZL); doc.rect(ML, y, IW, 1, 'F'); y += 5;
+  doc.setFillColor(...NRJ); doc.rect(ML, y, IW, 1, 'F'); y += 5;
   doc.setFillColor(...NRJ); doc.rect(ML, y, 30, 1, 'F'); y += 4;
-  doc.setTextColor(...AZL); doc.setFont('helvetica','bold'); doc.setFontSize(8);
+  doc.setTextColor(...NRJ); doc.setFont('helvetica','bold'); doc.setFontSize(8);
   doc.text('CONDICIONES', ML, y); y += 6;
   const conds = [
     'Precios en pesos colombianos (COP). IVA incluido solo donde se indica.',
@@ -1654,7 +1655,7 @@ async function generarPDFDesdeSnap(s) {
   y += 6;
 
   // ── Firmas
-  doc.setDrawColor(...GRL); doc.setLineWidth(0.5);
+  doc.setDrawColor(...NRJ); doc.setLineWidth(0.5);
   doc.line(ML, y, ML+60, y); doc.line(PW-MR-60, y, PW-MR, y); y += 4;
   doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...GRS);
   doc.text('Firma autorizada — ESTANTEK', ML, y);
@@ -1728,113 +1729,113 @@ function getConfigForPrompt() {
     GALVANIZADO: 'perforated galvanized steel',
   }[entrepano] || 'wooden';
   const tipoDesc = tipo === 'PESADA' ? 'heavy-duty' : 'medium-duty';
+  const cantidad = parseInt(document.getElementById('confCantidad')?.value) || 1;
   return { tipo, modo, torre, largo, prof, niveles, modulos, entrepano,
-           largoUtil, largoTotal, grupDesc, cap, shelfMat, tipoDesc };
+           largoUtil, largoTotal, grupDesc, cap, shelfMat, tipoDesc, cantidad };
 }
 
-// ── A) Ilustración técnica tipo catálogo industrial ──────────
+// ── Helpers para prompts ──────────────────────────────────────
+function _profLabel(p) { return p === '0.60' ? '0.6m' : p === '0.80' ? '0.8m' : p + 'm'; }
+
+// ── A) Técnico — estilo catálogo industrial ───────────────────
 function buildTechnicalPrompt(c) {
-  const isLinea = c.modo === 'LINEA';
-  if (isLinea) {
-    const nShared = c.modulos - 1;
-    return (
-      `Isometric technical product illustration of a connected ${c.tipoDesc} industrial metal shelving system, ` +
-      `${c.modulos} modules in a continuous row, engineering catalog style, ` +
-      `pure white background, precise clean vector-like linework, minimal consistent shadows, ` +
-      `dark charcoal black powder-coated steel uprights (#1A1A1A) with X-cross diagonal bracing, ` +
-      `${c.modulos + 1} vertical uprights total — ${nShared} shared intermediate column${nShared !== 1 ? 's' : ''} visible between modules, ` +
-      `bright orange horizontal load beams (#E65100), ${c.shelfMat} shelf panels, ` +
-      `${c.niveles} shelf levels per module, ` +
-      `overall dimensions: ${c.torre}m tall × ${c.largoTotal}m total width × ${c.prof}m deep, ` +
-      `clean dimension arrows: useful span ${c.largoUtil}m, total width ${c.largoTotal}m, height ${c.torre}m, depth ${c.prof}m, ` +
-      `load capacity label: ${c.cap} per level, ` +
-      `subtle repeating ESTANTEK watermark pattern at 5% opacity across white background, ` +
-      `professional industrial catalog render, high detail, no people, no loose objects`
-    );
-  } else {
-    return (
-      `Isometric technical product illustration of a single ${c.tipoDesc} industrial metal shelving unit, ` +
-      `centered isolated rack on pure white background, engineering catalog style, ` +
-      `precise clean vector-like linework, minimal consistent shadow at base, ` +
-      `dark charcoal black powder-coated steel uprights (#1A1A1A) with X-cross diagonal bracing on side panels, ` +
-      `bright orange horizontal load beams (#E65100), ${c.shelfMat} shelf panels, ` +
-      `${c.niveles} shelf levels, ` +
-      `dimensions: ${c.torre}m tall × ${c.largoTotal}m wide × ${c.prof}m deep, ` +
-      `clean dimension arrows indicating height ${c.torre}m, width ${c.largoTotal}m, depth ${c.prof}m, ` +
-      `load capacity label: ${c.cap} per level, ` +
-      `subtle repeating ESTANTEK watermark pattern at 5% opacity across background, ` +
-      `professional industrial catalog render, high detail, no people`
-    );
+  if (c.modo === 'LINEA') {
+    const nCols = c.modulos + 1;
+    const moduloDesc = configGrupos.length === 1
+      ? `${c.modulos} modules × ${configGrupos[0].largo}m each`
+      : configGrupos.map(g=>`${g.cant}×${g.largo}m`).join(' + ');
+    return [
+      `Technical 3D illustration of a connected industrial shelving system,`,
+      `${c.modulos} modules joined in a single continuous line,`,
+      `clean white background with faint "ESTANTEK" watermark pattern,`,
+      `${c.niveles} shelf levels per module, ${c.torre}m tall,`,
+      `total width ${c.largoTotal}m (${moduloDesc}), ${_profLabel(String(c.prof))} deep,`,
+      `${nCols} dark charcoal/black vertical steel columns with X-cross bracing between each pair (${c.modulos-1} intermediate columns are shared between adjacent modules),`,
+      `bright orange horizontal beams spanning each module (#E65100),`,
+      `natural wood MDF shelf panels (honey/light brown color),`,
+      `3/4 perspective view showing all ${c.modulos} modules clearly,`,
+      `black dimension arrows: ${c.torre}m ALTO, ${_profLabel(String(c.prof))} PROFUNDO, total ${c.largoTotal}m LARGO TOTAL, useful span ${c.largoUtil}m ANCHO ÚTIL,`,
+      `small black label box showing "Carga máx. por nivel: ${c.cap}",`,
+      `technical product illustration style, isometric-like, sharp edges, no shadows, flat studio lighting, high detail`,
+    ].join('\n');
   }
+  // INDIVIDUAL
+  const nLabel = (c.cantidad||1) > 1
+    ? `${c.cantidad} identical units shown side by side with small gap, label "× ${c.cantidad} unidades" visible,`
+    : `single centered isolated unit,`;
+  return [
+    `Technical 3D illustration of an industrial metal shelving unit,`,
+    `${nLabel}`,
+    `clean white background with faint "ESTANTEK" watermark pattern,`,
+    `${c.niveles} shelf levels, ${c.torre}m tall x ${c.largoTotal}m wide x ${_profLabel(String(c.prof))} deep,`,
+    `dark charcoal/black steel frame columns with X-cross diagonal bracing,`,
+    `bright orange horizontal load beams (#E65100),`,
+    `natural wood MDF shelf panels (honey/light brown color),`,
+    `3/4 perspective view from front-right corner,`,
+    `black dimension arrows showing: ${c.torre}m ALTO, ${_profLabel(String(c.prof))} PROFUNDO, ${c.largoUtil}m LARGO ÚTIL,`,
+    `small black label box showing "Carga máx. por nivel: ${c.cap}",`,
+    `technical product illustration style, isometric-like, sharp edges, no shadows, flat studio lighting, high detail`,
+  ].join('\n');
 }
 
 // ── B) Mockup bodega — instalado y cargado ───────────────────
 function buildWarehouseMockupPrompt(c) {
-  const isLinea = c.modo === 'LINEA';
-  if (isLinea) {
-    const nShared = c.modulos - 1;
-    return (
-      `Photorealistic commercial warehouse mockup, ` +
-      `a fully installed ${c.modulos}-module connected ${c.tipoDesc} metal shelving run, ` +
-      `continuous modular structure ${c.largoTotal}m wide × ${c.torre}m tall × ${c.prof}m deep, ` +
-      `${c.modulos + 1} black steel uprights including ${nShared} shared intermediate column${nShared !== 1 ? 's' : ''} clearly visible along the full run, ` +
-      `dark charcoal black powder-coated steel frame (#1A1A1A), bright orange horizontal beams (#E65100), ` +
-      `${c.shelfMat} shelf panels, ${c.niveles} levels per module fully loaded with organized cardboard boxes and packaged inventory, ` +
-      `${c.cap} per level load capacity, ` +
-      `clean industrial warehouse interior, polished concrete floor, high-bay overhead lighting, ` +
-      `wide perspective shot capturing the full length of the shelving run with visible depth, ` +
-      `subtle ESTANTEK logo watermark on visible upright columns, ` +
-      `professional commercial photography, cinematic quality, sharp focus, no people`
-    );
-  } else {
-    return (
-      `Photorealistic commercial warehouse mockup, ` +
-      `a single fully installed ${c.tipoDesc} metal shelving unit in active use, ` +
-      `${c.torre}m tall × ${c.largoTotal}m wide × ${c.prof}m deep, ${c.niveles} shelf levels, ` +
-      `dark charcoal black powder-coated steel uprights (#1A1A1A) with X-cross side bracing, ` +
-      `bright orange horizontal load beams (#E65100), ${c.shelfMat} shelf panels, ` +
-      `all levels neatly loaded with organized cardboard boxes and packaged products, ` +
-      `${c.cap} per level load capacity, ` +
-      `clean industrial warehouse interior, polished concrete floor, overhead industrial bay lighting, ` +
-      `three-quarter perspective view, unit centered and prominent in frame, slight depth of field, ` +
-      `subtle ESTANTEK logo watermark visible on steel uprights, ` +
-      `professional commercial photography, cinematic quality, sharp focus, no people`
-    );
+  if (c.modo === 'LINEA') {
+    return [
+      `Photorealistic commercial warehouse mockup,`,
+      `a fully installed ${c.modulos}-module connected industrial metal shelving run,`,
+      `continuous modular structure ${c.largoTotal}m wide × ${c.torre}m tall × ${_profLabel(String(c.prof))} deep,`,
+      `${c.modulos+1} dark charcoal/black steel uprights (intermediate columns shared between modules),`,
+      `bright orange horizontal beams (#E65100), natural wood MDF shelf panels,`,
+      `${c.niveles} levels per module fully loaded with organized cardboard boxes and packaged inventory,`,
+      `${c.cap} per level load capacity,`,
+      `clean industrial warehouse interior, polished concrete floor, high-bay overhead lighting,`,
+      `wide perspective shot capturing the full length of the shelving run,`,
+      `subtle ESTANTEK watermark on visible upright columns,`,
+      `professional commercial photography, sharp focus, no people`,
+    ].join('\n');
   }
+  return [
+    `Photorealistic commercial warehouse mockup,`,
+    `a single fully installed industrial metal shelving unit in active use,`,
+    `${c.torre}m tall × ${c.largoTotal}m wide × ${_profLabel(String(c.prof))} deep, ${c.niveles} shelf levels,`,
+    `dark charcoal/black steel uprights with X-cross side bracing,`,
+    `bright orange horizontal load beams (#E65100), natural wood MDF shelf panels,`,
+    `all levels neatly loaded with organized cardboard boxes and packaged products,`,
+    `${c.cap} per level load capacity,`,
+    `clean industrial warehouse interior, polished concrete floor, overhead industrial bay lighting,`,
+    `three-quarter perspective view, unit centered and prominent in frame,`,
+    `subtle ESTANTEK watermark visible on steel uprights,`,
+    `professional commercial photography, sharp focus, no people`,
+  ].join('\n');
 }
 
-// ── C) Mockup comercial — imagen aspiracional de venta ───────
+// ── C) Mockup comercial — imagen aspiracional ────────────────
 function buildCommercialMockupPrompt(c) {
-  const isLinea = c.modo === 'LINEA';
-  const env = isLinea
-    ? 'large-format commercial storage showroom or well-organized distribution warehouse'
-    : 'tidy organized storage room, hardware store back area, or boutique warehouse showroom';
-  if (isLinea) {
-    const nShared = c.modulos - 1;
-    return (
-      `Aspirational commercial product image, ${env}, ` +
-      `a premium ${c.modulos}-module connected ${c.tipoDesc} shelving system as the hero of the shot, ` +
-      `continuous modular structure ${c.largoTotal}m wide × ${c.torre}m tall × ${c.prof}m deep, ` +
-      `${c.modulos + 1} black steel uprights — ${nShared} shared intermediate column${nShared !== 1 ? 's' : ''} creating a strong rhythmic structure — bright orange accent beams (#E65100), ` +
-      `dark charcoal black powder-coated frame (#1A1A1A), ${c.shelfMat} shelf panels, ` +
-      `${c.niveles} levels per module stocked with neatly organized products, ${c.cap} per level, ` +
-      `bright clean commercial space, warm professional lighting, wide-angle impressive perspective, ` +
-      `brand-friendly composition, subtle ESTANTEK logo watermark on upright columns, ` +
-      `aspirational high-end sales imagery, premium quality, no people`
-    );
-  } else {
-    return (
-      `Aspirational commercial product image, ${env}, ` +
-      `a single premium ${c.tipoDesc} metal shelving unit as the hero of the frame, ` +
-      `${c.torre}m tall × ${c.largoTotal}m wide × ${c.prof}m deep, ${c.niveles} beautifully organized levels, ` +
-      `dark charcoal black powder-coated steel uprights (#1A1A1A) with X-cross side bracing, bright orange accent beams (#E65100), ` +
-      `${c.shelfMat} shelf panels, products and boxes displayed cleanly on every level, ${c.cap} per level, ` +
-      `bright clean retail or showroom atmosphere, warm natural and studio lighting mix, ` +
-      `brand-friendly composition with the unit prominent and well-lit, ` +
-      `subtle ESTANTEK logo watermark visible on steel frame, ` +
-      `aspirational high-end sales imagery, premium quality, no people`
-    );
+  if (c.modo === 'LINEA') {
+    return [
+      `Aspirational commercial product image, large-format commercial storage showroom,`,
+      `a premium ${c.modulos}-module connected shelving system as the hero of the shot,`,
+      `${c.largoTotal}m wide × ${c.torre}m tall × ${_profLabel(String(c.prof))} deep,`,
+      `${c.modulos+1} dark charcoal/black steel uprights — shared intermediate columns — bright orange accent beams (#E65100),`,
+      `natural wood MDF shelf panels, ${c.niveles} levels per module stocked with neatly organized products,`,
+      `${c.cap} per level,`,
+      `bright clean commercial space, warm professional lighting, wide-angle impressive perspective,`,
+      `brand-friendly composition, subtle ESTANTEK logo watermark on upright columns,`,
+      `aspirational high-end sales imagery, premium quality, no people`,
+    ].join('\n');
   }
+  return [
+    `Aspirational commercial product image, tidy organized showroom or boutique warehouse,`,
+    `a single premium industrial metal shelving unit as the hero of the frame,`,
+    `${c.torre}m tall × ${c.largoTotal}m wide × ${_profLabel(String(c.prof))} deep, ${c.niveles} beautifully organized levels,`,
+    `dark charcoal/black steel uprights with X-cross bracing, bright orange accent beams (#E65100),`,
+    `natural wood MDF shelf panels, products and boxes displayed cleanly on every level,`,
+    `${c.cap} per level,`,
+    `warm professional studio lighting, brand-friendly composition,`,
+    `subtle ESTANTEK logo watermark visible on steel frame,`,
+    `aspirational high-end sales imagery, premium quality, no people`,
+  ].join('\n');
 }
 
 // ── Despachador ──────────────────────────────────────────────
@@ -2254,10 +2255,10 @@ function agregarDesdeConfig() {
     const porLinea = numTorres * torPrice + costVigas + costEnts;
 
     const nombre = [
-      `Línea de ${totalMods} módulos (${grupDesc}) — Torre ${tipoN} ${torre}m × ${profFull} — ${niveles} niveles — Entrepaño ${entNFull}`,
-      `Largo útil: ${largoUtil.toFixed(2)}m | Largo total: ${largoTot}m`,
-      `Piezas: ${numTorres} torres + ${totalVigas} vigas + ${totalEnts} entrepanos`,
-      `Capacidad: ${cap} por nivel`,
+      `Línea de ${totalMods} módulos unidos — Torre ${tipoN} ${torre}m × ${profFull}`,
+      `${niveles} niveles | Entrepaño ${entNFull} × ${profL}`,
+      `Largo útil total: ${largoUtil.toFixed(2)}m | Largo total con torres: ${largoTot}m`,
+      `Torres: ${numTorres} (intermedias compartidas) | Capacidad: ${cap} por nivel`,
     ].join('\n');
 
     addProducto(nombre, cantidad, porLinea, desgloseItems);
@@ -2269,9 +2270,13 @@ function agregarDesdeConfig() {
     if (!vigaPrice || !entPrice) return;
     const largoTot = (parseFloat(largo) + 0.14).toFixed(2);
 
+    const prefijo = cantidad > 1 ? `${cantidad} estantes independientes — ` : '';
     const nombre = [
-      `Torre ${tipoN} ${torre}m × ${profFull} — ${niveles} niveles — Entrepaño ${entNFull} ${largo}m × ${profL}`,
-      `Largo útil: ${largo}m | Largo total con torres: ${largoTot}m`,
+      `${prefijo}Torre ${tipoN} ${torre}m × ${profFull}`,
+      `${niveles} niveles | Entrepaño ${entNFull} ${largo}m × ${profL}`,
+      cantidad > 1
+        ? `Largo útil por estante: ${largo}m | Largo total por estante: ${largoTot}m`
+        : `Largo útil: ${largo}m | Largo total con torres: ${largoTot}m`,
       `Capacidad: ${cap} por nivel`,
     ].join('\n');
 
