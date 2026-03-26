@@ -504,6 +504,15 @@ html, body { background: var(--bg); color: var(--negro); font-family: 'Barlow', 
   font-weight: 700; color: var(--azul); font-size: 12px;
 }
 
+/* ── GRUPOS DE MÓDULOS (línea unida) ─────────────────────── */
+.conf-grupo-fila { display:flex; align-items:center; gap:6px; margin-bottom:6px; }
+.conf-grupo-fila input[type=number] { width:52px; text-align:center; padding:6px 4px; }
+.conf-grupo-fila select { flex:1; }
+.conf-grupo-btn-rm { background:var(--rojo); color:white; border:none; border-radius:4px;
+  padding:0 9px; height:34px; cursor:pointer; font-size:17px; line-height:1; flex-shrink:0; }
+.conf-grupos-resumen { font-size:11px; color:var(--gris-osc); margin-top:4px; padding:5px 9px;
+  background:var(--azul-claro); border-radius:4px; }
+
 /* ── PROMPT RENDER ───────────────────────────────────────── */
 .render-prompt-box {
   width: 100%; min-height: 100px; background: var(--bg);
@@ -695,9 +704,11 @@ html, body { background: var(--bg); color: var(--negro); font-family: 'Barlow', 
     </div>
 
     <!-- Solo visible en modo LÍNEA DE MÓDULOS -->
-    <div id="confModulosRow" class="field" style="display:none;margin-bottom:12px;">
-      <label>Módulos por línea</label>
-      <input type="number" id="confModulos" value="3" min="2" max="20" oninput="onConfigChange()">
+    <div id="confGruposRow" style="display:none;margin-bottom:12px;">
+      <label style="font-size:10px;font-weight:700;color:var(--azul);letter-spacing:0.8px;text-transform:uppercase;margin-bottom:8px;display:block">Módulos de la línea</label>
+      <div id="confGruposList"></div>
+      <button class="btn-secondary" onclick="addConfigGrupo()" style="font-size:11px;padding:5px 12px;margin-top:3px;width:100%">+ Agregar otro grupo</button>
+      <div id="confGruposResumen" class="conf-grupos-resumen"></div>
     </div>
 
     <!-- Desglose de precio -->
@@ -1697,13 +1708,19 @@ function getConfigForPrompt() {
   const prof      = parseFloat(document.getElementById('confProf')?.value   || '0.60');
   const niveles   = parseInt(document.getElementById('confNiveles')?.value) || 3;
   const entrepano = document.getElementById('confEntrepano')?.value || 'ECONOMICA';
-  const modulos   = modo === 'LINEA'
-    ? Math.max(2, parseInt(document.getElementById('confModulos')?.value) || 3) : 1;
-  const largoUtil  = modo === 'LINEA'
-    ? (modulos * largo).toFixed(2) : largo.toFixed(2);
-  const largoTotal = modo === 'LINEA'
-    ? (modulos * largo + (modulos + 1) * 0.07).toFixed(2)
-    : (largo + 0.14).toFixed(2);
+  // Para LINEA: usar los grupos actuales de configGrupos
+  const modulos    = modo === 'LINEA' ? configGrupos.reduce((s,g)=>s+g.cant,0) : 1;
+  const largoUtilN = modo === 'LINEA'
+    ? configGrupos.reduce((s,g)=>s+g.cant*parseFloat(g.largo),0)
+    : largo;
+  const largoTotalN = modo === 'LINEA'
+    ? (largoUtilN + (modulos+1)*0.07)
+    : (largo + 0.14);
+  const largoUtil  = largoUtilN.toFixed(2);
+  const largoTotal = largoTotalN.toFixed(2);
+  const grupDesc   = modo === 'LINEA'
+    ? configGrupos.map(g=>`${g.cant}×${g.largo}m`).join('+')
+    : `1×${largo.toFixed(2)}m`;
   const cap      = tipo === 'SEMIPESADA' ? '500 kg' : '2,000 kg';
   const shelfMat = {
     ECONOMICA:   'natural pine wood',
@@ -1712,7 +1729,7 @@ function getConfigForPrompt() {
   }[entrepano] || 'wooden';
   const tipoDesc = tipo === 'PESADA' ? 'heavy-duty' : 'medium-duty';
   return { tipo, modo, torre, largo, prof, niveles, modulos, entrepano,
-           largoUtil, largoTotal, cap, shelfMat, tipoDesc };
+           largoUtil, largoTotal, grupDesc, cap, shelfMat, tipoDesc };
 }
 
 // ── A) Ilustración técnica tipo catálogo industrial ──────────
@@ -1724,7 +1741,7 @@ function buildTechnicalPrompt(c) {
       `Isometric technical product illustration of a connected ${c.tipoDesc} industrial metal shelving system, ` +
       `${c.modulos} modules in a continuous row, engineering catalog style, ` +
       `pure white background, precise clean vector-like linework, minimal consistent shadows, ` +
-      `royal blue powder-coated steel uprights (#1565C0) with X-cross diagonal bracing, ` +
+      `dark charcoal black powder-coated steel uprights (#1A1A1A) with X-cross diagonal bracing, ` +
       `${c.modulos + 1} vertical uprights total — ${nShared} shared intermediate column${nShared !== 1 ? 's' : ''} visible between modules, ` +
       `bright orange horizontal load beams (#E65100), ${c.shelfMat} shelf panels, ` +
       `${c.niveles} shelf levels per module, ` +
@@ -1739,7 +1756,7 @@ function buildTechnicalPrompt(c) {
       `Isometric technical product illustration of a single ${c.tipoDesc} industrial metal shelving unit, ` +
       `centered isolated rack on pure white background, engineering catalog style, ` +
       `precise clean vector-like linework, minimal consistent shadow at base, ` +
-      `royal blue powder-coated steel uprights (#1565C0) with X-cross diagonal bracing on side panels, ` +
+      `dark charcoal black powder-coated steel uprights (#1A1A1A) with X-cross diagonal bracing on side panels, ` +
       `bright orange horizontal load beams (#E65100), ${c.shelfMat} shelf panels, ` +
       `${c.niveles} shelf levels, ` +
       `dimensions: ${c.torre}m tall × ${c.largoTotal}m wide × ${c.prof}m deep, ` +
@@ -1760,8 +1777,8 @@ function buildWarehouseMockupPrompt(c) {
       `Photorealistic commercial warehouse mockup, ` +
       `a fully installed ${c.modulos}-module connected ${c.tipoDesc} metal shelving run, ` +
       `continuous modular structure ${c.largoTotal}m wide × ${c.torre}m tall × ${c.prof}m deep, ` +
-      `${c.modulos + 1} blue uprights including ${nShared} shared intermediate column${nShared !== 1 ? 's' : ''} clearly visible along the full run, ` +
-      `royal blue powder-coated steel frame (#1565C0), bright orange horizontal beams (#E65100), ` +
+      `${c.modulos + 1} black steel uprights including ${nShared} shared intermediate column${nShared !== 1 ? 's' : ''} clearly visible along the full run, ` +
+      `dark charcoal black powder-coated steel frame (#1A1A1A), bright orange horizontal beams (#E65100), ` +
       `${c.shelfMat} shelf panels, ${c.niveles} levels per module fully loaded with organized cardboard boxes and packaged inventory, ` +
       `${c.cap} per level load capacity, ` +
       `clean industrial warehouse interior, polished concrete floor, high-bay overhead lighting, ` +
@@ -1774,7 +1791,7 @@ function buildWarehouseMockupPrompt(c) {
       `Photorealistic commercial warehouse mockup, ` +
       `a single fully installed ${c.tipoDesc} metal shelving unit in active use, ` +
       `${c.torre}m tall × ${c.largoTotal}m wide × ${c.prof}m deep, ${c.niveles} shelf levels, ` +
-      `royal blue powder-coated steel uprights (#1565C0) with X-cross side bracing, ` +
+      `dark charcoal black powder-coated steel uprights (#1A1A1A) with X-cross side bracing, ` +
       `bright orange horizontal load beams (#E65100), ${c.shelfMat} shelf panels, ` +
       `all levels neatly loaded with organized cardboard boxes and packaged products, ` +
       `${c.cap} per level load capacity, ` +
@@ -1798,8 +1815,8 @@ function buildCommercialMockupPrompt(c) {
       `Aspirational commercial product image, ${env}, ` +
       `a premium ${c.modulos}-module connected ${c.tipoDesc} shelving system as the hero of the shot, ` +
       `continuous modular structure ${c.largoTotal}m wide × ${c.torre}m tall × ${c.prof}m deep, ` +
-      `${c.modulos + 1} blue steel uprights — ${nShared} shared intermediate column${nShared !== 1 ? 's' : ''} creating a strong rhythmic structure — bright orange accent beams (#E65100), ` +
-      `royal blue powder-coated frame (#1565C0), ${c.shelfMat} shelf panels, ` +
+      `${c.modulos + 1} black steel uprights — ${nShared} shared intermediate column${nShared !== 1 ? 's' : ''} creating a strong rhythmic structure — bright orange accent beams (#E65100), ` +
+      `dark charcoal black powder-coated frame (#1A1A1A), ${c.shelfMat} shelf panels, ` +
       `${c.niveles} levels per module stocked with neatly organized products, ${c.cap} per level, ` +
       `bright clean commercial space, warm professional lighting, wide-angle impressive perspective, ` +
       `brand-friendly composition, subtle ESTANTEK logo watermark on upright columns, ` +
@@ -1810,7 +1827,7 @@ function buildCommercialMockupPrompt(c) {
       `Aspirational commercial product image, ${env}, ` +
       `a single premium ${c.tipoDesc} metal shelving unit as the hero of the frame, ` +
       `${c.torre}m tall × ${c.largoTotal}m wide × ${c.prof}m deep, ${c.niveles} beautifully organized levels, ` +
-      `royal blue powder-coated steel uprights (#1565C0) with X-cross side bracing, bright orange accent beams (#E65100), ` +
+      `dark charcoal black powder-coated steel uprights (#1A1A1A) with X-cross side bracing, bright orange accent beams (#E65100), ` +
       `${c.shelfMat} shelf panels, products and boxes displayed cleanly on every level, ${c.cap} per level, ` +
       `bright clean retail or showroom atmosphere, warm natural and studio lighting mix, ` +
       `brand-friendly composition with the unit prominent and well-lit, ` +
@@ -1858,6 +1875,57 @@ function copiarPromptRender() {
 let precios = null;
 let configTipo = 'SEMIPESADA';
 let configModo = 'INDIVIDUAL';
+// Grupos para modo LINEA: [{cant:N, largo:'2.40'}, ...]
+let configGrupos = [{ cant: 3, largo: '2.40' }];
+
+// ── Renderizar lista de grupos ────────────────────────────
+function renderGrupos() {
+  const list    = document.getElementById('confGruposList');
+  const resumen = document.getElementById('confGruposResumen');
+  if (!list) return;
+  const largoOpts = ['2.00','2.40','2.80'].map(v =>
+    `<option value="${v}">${v} m</option>`
+  ).join('');
+  list.innerHTML = configGrupos.map((g, i) => `
+    <div class="conf-grupo-fila">
+      <input type="number" value="${g.cant}" min="1" max="50"
+        onchange="configGrupos[${i}].cant=Math.max(1,parseInt(this.value)||1);renderGrupos();onConfigChange()"
+        style="width:52px;text-align:center;padding:6px 4px">
+      <span style="font-size:12px;color:var(--gris-osc);white-space:nowrap">mód. ×</span>
+      <select onchange="configGrupos[${i}].largo=this.value;renderGrupos();onConfigChange()" style="flex:1">
+        ${['2.00','2.40','2.80'].map(v =>
+          `<option value="${v}" ${g.largo===v?'selected':''}>${v} m</option>`
+        ).join('')}
+      </select>
+      ${configGrupos.length > 1
+        ? `<button class="conf-grupo-btn-rm" onclick="removeConfigGrupo(${i})">×</button>`
+        : '<div style="width:30px"></div>'}
+    </div>
+  `).join('');
+  // Resumen
+  const totalMods = configGrupos.reduce((s,g) => s+g.cant, 0);
+  const largoUtil = configGrupos.reduce((s,g) => s+g.cant*parseFloat(g.largo), 0);
+  const numTorres = totalMods + 1;
+  const largoTot  = (largoUtil + numTorres * 0.07).toFixed(2);
+  const grupDesc  = configGrupos.map(g => `${g.cant}×${g.largo}m`).join(' + ');
+  if (resumen) resumen.innerHTML =
+    `<strong>${totalMods} módulos</strong> (${grupDesc}) &nbsp;·&nbsp; ` +
+    `L. útil: <strong>${largoUtil.toFixed(2)}m</strong> &nbsp;·&nbsp; ` +
+    `L. total: <strong>${largoTot}m</strong>`;
+}
+
+function addConfigGrupo() {
+  configGrupos.push({ cant: 1, largo: '2.40' });
+  renderGrupos();
+  onConfigChange();
+}
+
+function removeConfigGrupo(i) {
+  if (configGrupos.length <= 1) return;
+  configGrupos.splice(i, 1);
+  renderGrupos();
+  onConfigChange();
+}
 
 // Precios de referencia exactos del Excel Tabla_Estantek_completada_1.xlsx
 // (fallback si la API no responde — la fuente verdadera es el Google Sheet)
@@ -1961,14 +2029,15 @@ function setConfigModo(modo) {
   configModo = modo;
   document.getElementById('modoBtnInd').classList.toggle('active', modo === 'INDIVIDUAL');
   document.getElementById('modoBtnLinea').classList.toggle('active', modo === 'LINEA');
-  const modRow   = document.getElementById('confModulosRow');
-  const cantLbl  = document.getElementById('confCantidadLabel');
+  const gruposRow = document.getElementById('confGruposRow');
+  const cantLbl   = document.getElementById('confCantidadLabel');
   if (modo === 'LINEA') {
-    modRow.style.display  = 'block';
-    cantLbl.textContent   = 'Cant. de líneas';
+    gruposRow.style.display = 'block';
+    cantLbl.textContent     = 'Cant. de líneas';
+    renderGrupos();
   } else {
-    modRow.style.display  = 'none';
-    cantLbl.textContent   = 'Cantidad de estanterías';
+    gruposRow.style.display = 'none';
+    cantLbl.textContent     = 'Cantidad de estanterías';
   }
   actualizarConfigUI();
 }
@@ -2010,54 +2079,65 @@ function actualizarConfigUI() {
   const niveles   = parseInt(document.getElementById('confNiveles').value) || 3;
   const cantidad  = parseInt(document.getElementById('confCantidad').value) || 1;
 
-  const torPrice  = precios.torres?.[tipo]?.[torre]?.[prof];
-  const vigaPrice = precios.vigas?.[tipo]?.[largo];
-  const entPrice  = precios.entrepanos?.[entrepano]?.[largo]?.[prof];
-
-  if (!torPrice || !vigaPrice || !entPrice) {
-    // Debug: muestra en consola las claves disponibles vs. las buscadas
-    console.warn('[ESTANTEK] Precio no encontrado:', {
-      buscado: { tipo, torre, prof, largo, entrepano },
-      torres_cats: Object.keys(precios.torres || {}),
-      torres_alts: Object.keys(precios.torres?.[tipo] || {}),
-      torres_profs: Object.keys(precios.torres?.[tipo]?.[torre] || {}),
-      vigas_cats: Object.keys(precios.vigas || {}),
-      vigas_largos: Object.keys(precios.vigas?.[tipo] || {}),
-      ent_cats: Object.keys(precios.entrepanos || {}),
-      ent_largos: Object.keys(precios.entrepanos?.[entrepano] || {}),
-      ent_profs: Object.keys(precios.entrepanos?.[entrepano]?.[largo] || {}),
-      torPrice, vigaPrice, entPrice,
-    });
-    desglose.innerHTML = '<div class="conf-no-price">Combinación no disponible en lista de precios.<br>Ajusta las dimensiones o actualiza el Google Sheet.</div>';
-    btn.disabled = true;
-    return;
-  }
-
+  const torPrice = precios.torres?.[tipo]?.[torre]?.[prof];
   const tipoN    = tipo === 'SEMIPESADA' ? 'Semipesada' : 'Pesada';
   const entN     = { ECONOMICA: 'Madera Económica', PREMIUM: 'Madera Premium', GALVANIZADO: 'Galvanizado' }[entrepano];
   const profLbl  = prof === '0.60' ? '60 cm' : prof === '0.80' ? '80 cm' : prof + ' m';
 
   if (configModo === 'LINEA') {
-    const modulos   = Math.max(2, parseInt(document.getElementById('confModulos').value) || 3);
-    const numTorres = modulos + 1;
-    const numVigas  = modulos * niveles * 2;
-    const numEnts   = modulos * niveles;
-    const largoUtil = (modulos * parseFloat(largo)).toFixed(2);
-    const largoTot  = (modulos * parseFloat(largo) + (modulos + 1) * 0.07).toFixed(2);
-    const cap       = tipo === 'SEMIPESADA' ? '500 kg' : '2.000 kg';
+    // Precios por grupo (cada grupo puede tener distinto largo)
+    const groupData = configGrupos.map(g => ({
+      cant: g.cant, largo: g.largo,
+      vigaPrice: precios.vigas?.[tipo]?.[g.largo] || 0,
+      entPrice:  precios.entrepanos?.[entrepano]?.[g.largo]?.[prof] || 0,
+    }));
+    const allOk = torPrice && groupData.every(g => g.vigaPrice && g.entPrice);
+    if (!allOk) {
+      console.warn('[ESTANTEK] Precio no encontrado:', {
+        buscado: { tipo, torre, prof, entrepano, grupos: configGrupos },
+        torres_cats: Object.keys(precios.torres || {}),
+        vigas_cats: Object.keys(precios.vigas || {}),
+        ent_cats: Object.keys(precios.entrepanos || {}),
+        groupData,
+      });
+      desglose.innerHTML = '<div class="conf-no-price">Combinación no disponible en lista de precios.<br>Ajusta las dimensiones o actualiza el Google Sheet.</div>';
+      btn.disabled = true;
+      return;
+    }
 
+    const totalMods = groupData.reduce((s,g) => s+g.cant, 0);
+    const numTorres = totalMods + 1;
+    const largoUtil = groupData.reduce((s,g) => s+g.cant*parseFloat(g.largo), 0);
+    const largoTot  = (largoUtil + numTorres * 0.07).toFixed(2);
+    const cap       = tipo === 'SEMIPESADA' ? '500 kg' : '2.000 kg';
     const costTorres = numTorres * torPrice;
-    const costVigas  = numVigas  * vigaPrice;
-    const costEnts   = numEnts   * entPrice;
-    const porLinea   = costTorres + costVigas + costEnts;
-    const total      = porLinea * cantidad;
+
+    // Agrupar por largo para mostrar filas separadas
+    const byLargo = {};
+    groupData.forEach(g => {
+      if (!byLargo[g.largo]) byLargo[g.largo] = { cant:0, vigaPrice:g.vigaPrice, entPrice:g.entPrice };
+      byLargo[g.largo].cant += g.cant;
+    });
+
+    let costVigas = 0, costEnts = 0, vigasHTML = '', entsHTML = '';
+    Object.entries(byLargo).forEach(([l, d]) => {
+      const nV = d.cant * niveles * 2, nE = d.cant * niveles;
+      costVigas += nV * d.vigaPrice;
+      costEnts  += nE * d.entPrice;
+      vigasHTML += `<div class="conf-row"><span>${nV} Vigas ${l}m <small style="color:var(--gris-clr)">(${d.cant}×${niveles}×2)</small></span><span>${fmt(nV*d.vigaPrice)}</span></div>`;
+      entsHTML  += `<div class="conf-row"><span>${nE} Entrepanos ${entN} ${l}m×${profLbl} <small style="color:var(--gris-clr)">(${d.cant}×${niveles})</small></span><span>${fmt(nE*d.entPrice)}</span></div>`;
+    });
+
+    const porLinea = costTorres + costVigas + costEnts;
+    const total    = porLinea * cantidad;
+    const grupDesc = configGrupos.map(g=>`${g.cant}×${g.largo}m`).join(' + ');
 
     desglose.innerHTML = `
       <div style="font-size:11px;font-weight:700;color:var(--azul);margin-bottom:8px;letter-spacing:0.5px;text-transform:uppercase;">
-        Línea de ${modulos} módulos unidos
+        Línea de ${totalMods} módulos (${grupDesc})
       </div>
       <div style="font-size:11px;color:var(--naranja);background:var(--naranja-cl);padding:5px 9px;border-radius:4px;margin-bottom:8px;display:flex;gap:14px;flex-wrap:wrap;font-weight:600;">
-        <span>L. útil: ${largoUtil}m</span>
+        <span>L. útil: ${largoUtil.toFixed(2)}m</span>
         <span>L. total: ${largoTot}m</span>
         <span>Carga máx: ${cap}/nivel</span>
       </div>
@@ -2065,25 +2145,28 @@ function actualizarConfigUI() {
         <span>${numTorres} Torres ${tipoN} ${torre}m × ${profLbl}</span>
         <span>${fmt(costTorres)}</span>
       </div>
-      <div class="conf-row">
-        <span>${numVigas} Vigas ${largo}m &nbsp;<small style="color:var(--gris-clr)">(${modulos} mód. × ${niveles} niv. × 2)</small></span>
-        <span>${fmt(costVigas)}</span>
-      </div>
-      <div class="conf-row">
-        <span>${numEnts} Entrepanos ${entN} ${largo}m × ${profLbl}</span>
-        <span>${fmt(costEnts)}</span>
-      </div>
+      ${vigasHTML}${entsHTML}
       <div class="conf-div"></div>
-      <div class="conf-row subtotal">
-        <span>Precio por línea</span>
-        <span>${fmt(porLinea)}</span>
-      </div>
+      <div class="conf-row subtotal"><span>Precio por línea</span><span>${fmt(porLinea)}</span></div>
       ${cantidad > 1
         ? `<div class="conf-row grand"><span>Total (${cantidad} líneas)</span><span>${fmt(total)}</span></div>`
-        : `<div class="conf-row grand"><span>Total</span><span>${fmt(total)}</span></div>`
-      }
+        : `<div class="conf-row grand"><span>Total</span><span>${fmt(total)}</span></div>`}
     `;
   } else {
+    const largo     = document.getElementById('confLargo').value;
+    const vigaPrice = precios.vigas?.[tipo]?.[largo];
+    const entPrice  = precios.entrepanos?.[entrepano]?.[largo]?.[prof];
+    if (!torPrice || !vigaPrice || !entPrice) {
+      console.warn('[ESTANTEK] Precio no encontrado:', {
+        buscado: { tipo, torre, prof, largo, entrepano },
+        torres_cats: Object.keys(precios.torres || {}),
+        vigas_cats: Object.keys(precios.vigas || {}),
+        ent_cats: Object.keys(precios.entrepanos || {}),
+      });
+      desglose.innerHTML = '<div class="conf-no-price">Combinación no disponible en lista de precios.<br>Ajusta las dimensiones o actualiza el Google Sheet.</div>';
+      btn.disabled = true;
+      return;
+    }
     // ── INDIVIDUAL ───────────────────────────────────────────
     const costTorres    = 2 * torPrice;
     const costVigas     = 2 * niveles * vigaPrice;
@@ -2124,16 +2207,12 @@ function agregarDesdeConfig() {
 
   const tipo      = configTipo;
   const torre     = document.getElementById('confTorre').value;
-  const largo     = document.getElementById('confLargo').value;
   const prof      = document.getElementById('confProf').value;
   const entrepano = document.getElementById('confEntrepano').value;
   const niveles   = parseInt(document.getElementById('confNiveles').value) || 3;
   const cantidad  = parseInt(document.getElementById('confCantidad').value) || 1;
-
   const torPrice  = precios.torres?.[tipo]?.[torre]?.[prof];
-  const vigaPrice = precios.vigas?.[tipo]?.[largo];
-  const entPrice  = precios.entrepanos?.[entrepano]?.[largo]?.[prof];
-  if (!torPrice || !vigaPrice || !entPrice) return;
+  if (!torPrice) return;
 
   const tipoN    = tipo === 'SEMIPESADA' ? 'Semipesada' : 'Pesada';
   const entNFull = { ECONOMICA: 'Madera Económica', PREMIUM: 'Madera Premium', GALVANIZADO: 'Galvanizado' }[entrepano];
@@ -2142,29 +2221,52 @@ function agregarDesdeConfig() {
   const cap      = tipo === 'SEMIPESADA' ? '500 kg' : '2.000 kg';
 
   if (configModo === 'LINEA') {
-    const modulos   = Math.max(2, parseInt(document.getElementById('confModulos').value) || 3);
-    const numTorres = modulos + 1;
-    const numVigas  = modulos * niveles * 2;
-    const numEnts   = modulos * niveles;
-    const largoUtil = (modulos * parseFloat(largo)).toFixed(2);
-    const largoTot  = (modulos * parseFloat(largo) + (modulos + 1) * 0.07).toFixed(2);
+    const groupData = configGrupos.map(g => ({
+      cant: g.cant, largo: g.largo,
+      vigaPrice: precios.vigas?.[tipo]?.[g.largo] || 0,
+      entPrice:  precios.entrepanos?.[entrepano]?.[g.largo]?.[prof] || 0,
+    }));
+    const totalMods = groupData.reduce((s,g) => s+g.cant, 0);
+    const numTorres = totalMods + 1;
+    const largoUtil = groupData.reduce((s,g) => s+g.cant*parseFloat(g.largo), 0);
+    const largoTot  = (largoUtil + numTorres * 0.07).toFixed(2);
+    const grupDesc  = configGrupos.map(g=>`${g.cant}×${g.largo}m`).join('+');
+
+    // Agrupar por largo para desglose
+    const byLargo = {};
+    groupData.forEach(g => {
+      if (!byLargo[g.largo]) byLargo[g.largo] = { cant:0, vigaPrice:g.vigaPrice, entPrice:g.entPrice };
+      byLargo[g.largo].cant += g.cant;
+    });
+
+    const desgloseItems = [
+      { desc: `Torres ${tipoN} ${torre}m × ${profL}`, cant: numTorres, precioUnit: torPrice },
+    ];
+    let totalVigas = 0, totalEnts = 0, costVigas = 0, costEnts = 0;
+    Object.entries(byLargo).forEach(([l, d]) => {
+      const nV = d.cant * niveles * 2, nE = d.cant * niveles;
+      totalVigas += nV; totalEnts += nE;
+      costVigas += nV * d.vigaPrice; costEnts += nE * d.entPrice;
+      desgloseItems.push({ desc: `Vigas ${tipoN} ${l}m`, cant: nV, precioUnit: d.vigaPrice });
+      desgloseItems.push({ desc: `Entrepanos ${entNFull} ${l}m × ${profL}`, cant: nE, precioUnit: d.entPrice });
+    });
+
+    const porLinea = numTorres * torPrice + costVigas + costEnts;
 
     const nombre = [
-      `Línea de ${modulos} módulos unidos — Torre ${tipoN} ${torre}m × ${profFull} — ${niveles} niveles — Entrepaño ${entNFull} ${largo}m × ${profL}`,
-      `Largo útil: ${largoUtil}m | Largo total: ${largoTot}m`,
-      `Piezas: ${numTorres} torres + ${numVigas} vigas + ${numEnts} entrepanos`,
+      `Línea de ${totalMods} módulos (${grupDesc}) — Torre ${tipoN} ${torre}m × ${profFull} — ${niveles} niveles — Entrepaño ${entNFull}`,
+      `Largo útil: ${largoUtil.toFixed(2)}m | Largo total: ${largoTot}m`,
+      `Piezas: ${numTorres} torres + ${totalVigas} vigas + ${totalEnts} entrepanos`,
       `Capacidad: ${cap} por nivel`,
     ].join('\n');
 
-    const desglose = [
-      { desc: `Torres ${tipoN} ${torre}m × ${profL}`,      cant: numTorres, precioUnit: torPrice  },
-      { desc: `Vigas ${tipoN} ${largo}m`,                  cant: numVigas,  precioUnit: vigaPrice },
-      { desc: `Entrepanos ${entNFull} ${largo}m × ${profL}`, cant: numEnts, precioUnit: entPrice  },
-    ];
-    const porLinea = numTorres * torPrice + numVigas * vigaPrice + numEnts * entPrice;
-    addProducto(nombre, cantidad, porLinea, desglose);
-    showToast(`Línea de ${modulos} módulos agregada`, 'ok');
+    addProducto(nombre, cantidad, porLinea, desgloseItems);
+    showToast(`Línea de ${totalMods} módulos agregada`, 'ok');
   } else {
+    const largo     = document.getElementById('confLargo').value;
+    const vigaPrice = precios.vigas?.[tipo]?.[largo];
+    const entPrice  = precios.entrepanos?.[entrepano]?.[largo]?.[prof];
+    if (!vigaPrice || !entPrice) return;
     const largoTot = (parseFloat(largo) + 0.14).toFixed(2);
 
     const nombre = [
